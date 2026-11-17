@@ -6,10 +6,10 @@ from pathlib import Path
 
 import httpx
 import pytest
-from ingestion import fetch_firms
-from ingestion.config import Settings, load_settings
-from ingestion.contract import FIRES_SCHEMA
-from ingestion.result import CollectorError
+from inversa.ingestion import fetch_firms
+from inversa.ingestion.config import Settings, load_settings
+from inversa.ingestion.contract import FIRES_SCHEMA
+from inversa.ingestion.result import CollectorError
 from samples import (
     EMPTY_FIRMS_CSV,
     FIRMS_HEADER,

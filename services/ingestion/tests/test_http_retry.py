@@ -4,8 +4,8 @@ from collections.abc import Callable
 
 import httpx
 import pytest
-from ingestion import http_retry
-from ingestion.http_retry import get_with_retry
+from inversa.ingestion import http_retry
+from inversa.ingestion.http_retry import get_with_retry
 
 
 def _scripted(
