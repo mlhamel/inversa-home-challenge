@@ -16,6 +16,8 @@ jobs:
       - uses: astral-sh/setup-uv@v6
       - uses: bufbuild/buf-setup-action@v1
       - uses: yoheimuta/action-setup-protolint@v4
+      - name: install prek
+        run: uv tool install prek
       - name: make verify
         run: make verify
       - name: conventional commit subjects
