@@ -23,6 +23,7 @@ jobs:
           curl -sSLO https://github.com/yoheimuta/protolint/releases/download/v0.58.0/checksums.txt
           grep 'protolint_0.58.0_linux_amd64.tar.gz' checksums.txt | sha256sum --check --strict
           tar -xzf protolint_0.58.0_linux_amd64.tar.gz
+          mkdir -p "$HOME/.local/bin"
           install -m 0755 protolint "$HOME/.local/bin/protolint"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
       - name: install prek
