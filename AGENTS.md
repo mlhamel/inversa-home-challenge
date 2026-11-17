@@ -34,3 +34,12 @@ Before considering any task or phase complete, you MUST run and pass:
 Follow `specs/README.md` Section 2 sequentially (`Phase 1` -> `Phase 6`). After completing each phase:
 1. Run `make verify` and fix all lint, type, or test failures.
 2. Summarize what was built and any tradeoffs made before moving to the next phase.
+
+## 6. Git & PR Workflow
+All changes land on `main` through squash-merged PRs created with `gh`. Work strictly **one step at a time**: one phase or sub-step per session — never batch multiple phases into a single branch, PR, or session — and stop for review after each completed step.
+
+1. Branch from a fresh `main` per step: `feat/01-proto-contracts`, `fix/ingestion-retry`, ...
+2. Write **Conventional Commits** — `type(scope): precise imperative message` (<= 100 chars), types `feat|fix|perf|refactor|test|build|ci|chore|docs|revert`, scopes from `proto|ingestion|api|web|infra|repo`. `scripts/check_conventional_commits.sh` enforces this via the prek commit-msg hook and in CI; PR titles must pass the same check because the squash-merge title becomes the commit subject.
+3. Before pushing, `make verify` must pass (see §3).
+4. Push, then create the PR with `gh pr create` (title + body following `.github/pull_request_template.md`).
+5. Merge only with `gh pr merge --squash` once CI is green; delete the branch afterwards.
