@@ -1,4 +1,4 @@
-.PHONY: proto lint typecheck test verify
+.PHONY: proto lint typecheck test backfill verify
 
 proto:
 	@if [ -d packages/proto ]; then \
@@ -29,5 +29,8 @@ test:
 	else \
 		echo "skip test: no test suites yet"; \
 	fi
+
+backfill:
+	uv run python -m ingestion.backfill
 
 verify: proto lint typecheck test
