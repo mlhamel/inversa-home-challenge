@@ -2,16 +2,18 @@ from __future__ import annotations
 
 import os
 from collections.abc import Mapping
-from dataclasses import dataclass
 from pathlib import Path
+
+from pydantic import BaseModel, ConfigDict
 
 
 class ConfigError(ValueError):
     pass
 
 
-@dataclass(frozen=True)
-class Settings:
+class Settings(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
     bbox: tuple[float, float, float, float]
     data_dir: Path
     firms_map_key: str | None
