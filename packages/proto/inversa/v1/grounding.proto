@@ -1,0 +1,55 @@
+syntax = "proto3";
+package inversa.v1;
+
+import "google/protobuf/timestamp.proto";
+import "inversa/v1/telemetry.proto";
+
+message BoundingBox {
+  double min_lon = 1;
+  double min_lat = 2;
+  double max_lon = 3;
+  double max_lat = 4;
+}
+
+message EvidenceRefs {
+  repeated string fire_ids = 1;
+  repeated string station_ids = 2;
+  google.protobuf.Timestamp focus_timestamp = 3;
+  optional BoundingBox bbox_focus = 4;
+}
+
+message DownwindMatch {
+  string fire_id = 1;
+  float fire_frp = 2;
+  string station_id = 3;
+  string station_name = 4;
+  optional float pm25 = 5;
+  QualityFlag quality_flag = 6;
+  double distance_km = 7;
+  float plume_bearing_deg = 8;
+  float wind_speed_10m = 9;
+  double angle_diff_deg = 10;
+}
+
+message McpToolEnvelope {
+  string summary_for_llm = 1;
+  repeated string data_quality_notes = 2;
+  EvidenceRefs evidence_refs = 3;
+  repeated DownwindMatch matches = 4;
+}
+
+message TimelineBucket {
+  google.protobuf.Timestamp hour_bucket = 1;
+  int32 active_fires_count = 2;
+  optional float avg_pm25 = 3;
+  optional float max_pm25 = 4;
+  int32 active_stations = 5;
+  int32 stale_stations = 6;
+}
+
+message MapSnapshot {
+  google.protobuf.Timestamp timestamp = 1;
+  repeated FireDetection fires = 2;
+  repeated AirQualityReading stations = 3;
+  repeated WindVector wind_vectors = 4;
+}

@@ -1,10 +1,25 @@
 [tool.uv.workspace]
-members = ["packages/shared-schemas", "services/ingestion", "services/api"]
+members = ["packages/shared-schemas"]
+
+[project]
+name = "inversa-home-challenge"
+version = "0.1.0"
+
+[dependency-groups]
+dev = [
+    "inversa-schemas",
+    "mypy",
+    "pytest",
+    "pytest-asyncio",
+]
+
+[tool.uv.sources]
+inversa-schemas = { workspace = true }
 
 [tool.ruff]
 line-length = 100
 target-version = "py312"
-exclude = ["packages/shared-schemas/src/inversa_schemas"]
+exclude = ["packages/shared-schemas/src/inversa"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "ASYNC"]
@@ -12,8 +27,9 @@ select = ["E", "F", "I", "B", "UP", "ASYNC"]
 [tool.mypy]
 python_version = "3.12"
 strict = true
-exclude = ["packages/shared-schemas/src/inversa_schemas"]
+exclude = ["packages/shared-schemas/src/inversa"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
-testpaths = ["services/ingestion/tests", "services/api/tests"]
+asyncio_default_fixture_loop_scope = "session"
+testpaths = ["packages/shared-schemas/tests"]
