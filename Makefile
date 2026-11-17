@@ -2,7 +2,7 @@
 
 proto:
 	@if [ -d packages/proto ]; then \
-		cd packages/proto && buf lint && protolint lint . && buf generate; \
+		cd packages/proto && buf lint && protolint lint . && buf generate && touch ../shared-schemas/src/inversa/py.typed; \
 	else \
 		echo "skip proto: packages/proto not present yet"; \
 	fi

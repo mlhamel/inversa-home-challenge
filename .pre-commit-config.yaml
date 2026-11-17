@@ -4,7 +4,9 @@ repos:
     hooks:
       - id: check-yaml
       - id: end-of-file-fixer
+        exclude: ^apps/web/src/generated/
       - id: trailing-whitespace
+        exclude: ^apps/web/src/generated/
       - id: check-added-large-files
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.8.4
@@ -12,6 +14,11 @@ repos:
       - id: ruff
   - repo: local
     hooks:
+      - id: protolint
+        name: protolint
+        language: system
+        entry: protolint lint
+        files: ^packages/proto/.*\.proto$
       - id: conventional-commit-message
         name: conventional commit message
         language: system
