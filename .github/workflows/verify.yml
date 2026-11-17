@@ -26,10 +26,22 @@ jobs:
           mkdir -p "$HOME/.local/bin"
           install -m 0755 protolint "$HOME/.local/bin/protolint"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: install protoc
+        run: |
+          cd /tmp
+          curl -sSLO https://github.com/protocolbuffers/protobuf/releases/download/v36.2/protoc-36.2-linux-x86_64.zip
+          unzip -oq protoc-36.2-linux-x86_64.zip -d protoc-36.2
+          mkdir -p "$HOME/.local/bin"
+          install -m 0755 protoc-36.2/bin/protoc "$HOME/.local/bin/protoc"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: install web deps
+        run: npm ci --prefix apps/web
       - name: install prek
         run: uv tool install prek
       - name: make verify
         run: make verify
+      - name: web typecheck
+        run: npm run typecheck --prefix apps/web
       - name: conventional commit subjects
         run: scripts/check_conventional_commits.sh --range "origin/${{ github.base_ref }}..HEAD"
       - name: conventional PR title
