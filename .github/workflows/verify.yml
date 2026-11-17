@@ -19,10 +19,10 @@ jobs:
       - name: install protolint
         run: |
           cd /tmp
-          curl -sSLo pl.tgz https://github.com/yoheimuta/protolint/releases/download/v0.58.0/protolint_0.58.0_linux_amd64.tar.gz
-          curl -sSLo pl.sums https://github.com/yoheimuta/protolint/releases/download/v0.58.0/checksums.txt
-          grep 'protolint_0.58.0_linux_amd64.tar.gz' pl.sums | sha256sum --check --strict
-          tar -xzf pl.tgz
+          curl -sSLO https://github.com/yoheimuta/protolint/releases/download/v0.58.0/protolint_0.58.0_linux_amd64.tar.gz
+          curl -sSLO https://github.com/yoheimuta/protolint/releases/download/v0.58.0/checksums.txt
+          grep 'protolint_0.58.0_linux_amd64.tar.gz' checksums.txt | sha256sum --check --strict
+          tar -xzf protolint_0.58.0_linux_amd64.tar.gz
           install -m 0755 protolint "$HOME/.local/bin/protolint"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
       - name: install prek
