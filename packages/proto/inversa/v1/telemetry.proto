@@ -1,0 +1,52 @@
+syntax = "proto3";
+package inversa.v1;
+
+import "google/protobuf/timestamp.proto";
+
+enum FireConfidence {
+  FIRE_CONFIDENCE_UNSPECIFIED = 0;
+  FIRE_CONFIDENCE_LOW = 1;
+  FIRE_CONFIDENCE_NOMINAL = 2;
+  FIRE_CONFIDENCE_HIGH = 3;
+}
+
+enum QualityFlag {
+  QUALITY_FLAG_UNSPECIFIED = 0;
+  QUALITY_FLAG_VALID = 1;
+  QUALITY_FLAG_OUTLIER = 2;
+  QUALITY_FLAG_STALE = 3;
+}
+
+message FireDetection {
+  string fire_id = 1;
+  google.protobuf.Timestamp observed_at = 2;
+  google.protobuf.Timestamp ingested_at = 3;
+  double lat = 4;
+  double lon = 5;
+  optional float frp = 6;
+  FireConfidence confidence = 7;
+  string satellite = 8;
+}
+
+message AirQualityReading {
+  string measurement_id = 1;
+  string station_id = 2;
+  string station_name = 3;
+  google.protobuf.Timestamp observed_at = 4;
+  google.protobuf.Timestamp ingested_at = 5;
+  double lat = 6;
+  double lon = 7;
+  optional float pm25 = 8;
+  QualityFlag quality_flag = 9;
+}
+
+message WindVector {
+  string grid_id = 1;
+  google.protobuf.Timestamp observed_at = 2;
+  google.protobuf.Timestamp ingested_at = 3;
+  double lat = 4;
+  double lon = 5;
+  float wind_speed_10m = 6;
+  float wind_direction_10m = 7;
+  optional float boundary_layer_height = 8;
+}
