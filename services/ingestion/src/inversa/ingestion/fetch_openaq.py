@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Final
 
@@ -13,6 +12,7 @@ from inversa.ingestion.http_retry import Pacer, get_with_retry
 from inversa.ingestion.result import CollectorError, CollectorResult
 from inversa.ingestion.validate import air_quality
 from inversa.v1 import telemetry_pb2 as telemetry
+from pydantic import BaseModel, ConfigDict
 
 BASE_URL: Final = "https://api.openaq.org/v3"
 PM25_PARAMETER_ID: Final[int] = 2
@@ -26,8 +26,9 @@ def openaq_pacer() -> Pacer:
     return Pacer(MIN_REQUEST_INTERVAL_SECONDS)
 
 
-@dataclass(frozen=True)
-class Station:
+class Station(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
     id: str
     name: str
     lat: float
