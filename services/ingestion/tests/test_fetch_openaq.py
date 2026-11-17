@@ -6,10 +6,10 @@ from typing import Any
 
 import httpx
 import pytest
-from ingestion import fetch_openaq
-from ingestion.config import Settings
-from ingestion.contract import AIR_QUALITY_SCHEMA
-from ingestion.result import CollectorError
+from inversa.ingestion import fetch_openaq
+from inversa.ingestion.config import Settings
+from inversa.ingestion.contract import AIR_QUALITY_SCHEMA
+from inversa.ingestion.result import CollectorError
 from samples import (
     FRESH_UTC,
     RUN_AT,

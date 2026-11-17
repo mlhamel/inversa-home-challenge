@@ -4,7 +4,7 @@ from datetime import datetime
 from pathlib import Path
 
 import pytest
-from ingestion.config import Settings, load_settings
+from inversa.ingestion.config import Settings, load_settings
 from samples import RUN_AT, TEST_BBOX
 
 
