@@ -8,12 +8,16 @@ proto:
 	fi
 
 lint:
-	prek run --all-files
+	@if [ -f .pre-commit-config.yaml ]; then \
+		prek run --all-files; \
+	else \
+		echo "skip lint: no .pre-commit-config.yaml yet"; \
+	fi
 
 typecheck:
 	@src=$$(ls -d services packages 2>/dev/null); \
 	if [ -n "$$src" ]; then \
-		uv run mypy $$src; \
+		uv run mypy --strict $$src; \
 	else \
 		echo "skip typecheck: no python sources yet"; \
 	fi

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-pattern='^(build|ci|chore|docs|feat|fix|perf|refactor|revert|test)(\([a-zA-Z0-9/_-]+\))?(!)?: .{1,100}$'
+pattern='^(build|ci|chore|docs|feat|fix|perf|refactor|revert|test)(\((proto|ingestion|api|web|infra|repo)\))?!?: .{1,100}$'
 
 usage() {
   echo "usage: $0 (--subject TEXT | --file PATH | --range BASE..HEAD)" >&2
@@ -23,7 +23,7 @@ case "${1:-}" in
   ;;
 --file)
   [ $# -eq 2 ] || usage
-  subject="$(grep -vE '^(#|$)' "$2" | sed -n '1p' | sed -E 's/ \(#[0-9]+\)$//')"
+  subject="$( (grep -vE '^(#|$)' "$2" || true) | sed -n '1p' | sed -E 's/ \(#[0-9]+\)$//')"
   check_subject "$subject"
   ;;
 --range)
