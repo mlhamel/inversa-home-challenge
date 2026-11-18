@@ -4,10 +4,10 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 import polars as pl
-from ingestion import fetch_firms
-from ingestion.contract import FIRES_SCHEMA, air_quality_rows
-from ingestion.storage import LOG_SCHEMA, record_batch, record_failure
-from ingestion.validate import air_quality
+from inversa.ingestion import fetch_firms
+from inversa.ingestion.contract import FIRES_SCHEMA, air_quality_rows
+from inversa.ingestion.storage import LOG_SCHEMA, record_batch, record_failure
+from inversa.ingestion.validate import air_quality
 from samples import FIRMS_HEADER, FIRMS_ROW_A, FIRMS_ROW_D, RUN_AT
 
 

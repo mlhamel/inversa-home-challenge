@@ -4,8 +4,8 @@ from datetime import datetime, timedelta
 from typing import Any
 
 import pytest
-from ingestion.contract import hash16
-from ingestion.validate import (
+from inversa.ingestion.contract import hash16
+from inversa.ingestion.validate import (
     ValidationError,
     air_quality,
     detect_fire,

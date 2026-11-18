@@ -5,8 +5,7 @@ from pathlib import Path
 from typing import Final, NamedTuple
 
 import polars as pl
-
-from ingestion.contract import DATETIME
+from inversa.ingestion.contract import DATETIME
 
 LOG_SCHEMA: Final[pl.Schema] = pl.Schema({
     "source": pl.String(),

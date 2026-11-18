@@ -3,9 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from typing import Final
 
-from inversa.v1 import telemetry_pb2 as telemetry
-
-from ingestion.contract import (
+from inversa.ingestion.contract import (
     fire_confidence_token,
     fire_id,
     hash16,
@@ -13,6 +11,7 @@ from ingestion.contract import (
     quality_flag_token,
     stamp,
 )
+from inversa.v1 import telemetry_pb2 as telemetry
 
 
 class ValidationError(ValueError):

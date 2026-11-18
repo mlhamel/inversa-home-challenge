@@ -6,13 +6,12 @@ from typing import Final
 
 import httpx
 import polars as pl
-
-from ingestion import fetch_firms, fetch_open_meteo, fetch_openaq
-from ingestion.config import Settings, load_settings
-from ingestion.contract import AIR_QUALITY_SCHEMA
-from ingestion.http_retry import Pacer
-from ingestion.result import CollectorError, CollectorResult
-from ingestion.storage import record_batch, record_failure
+from inversa.ingestion import fetch_firms, fetch_open_meteo, fetch_openaq
+from inversa.ingestion.config import Settings, load_settings
+from inversa.ingestion.contract import AIR_QUALITY_SCHEMA
+from inversa.ingestion.http_retry import Pacer
+from inversa.ingestion.result import CollectorError, CollectorResult
+from inversa.ingestion.storage import record_batch, record_failure
 
 BACKFILL_DAYS: Final[int] = 7
 FIRMS_RECENT_RANGE: Final[int] = 4

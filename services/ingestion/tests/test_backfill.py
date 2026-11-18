@@ -8,8 +8,8 @@ from typing import Any, Final
 import httpx
 import polars as pl
 import pytest
-from ingestion.backfill import backfill as run_backfill
-from ingestion.config import Settings
+from inversa.ingestion.backfill import backfill as run_backfill
+from inversa.ingestion.config import Settings
 from samples import (
     EMPTY_FIRMS_CSV,
     FIRMS_HEADER,
