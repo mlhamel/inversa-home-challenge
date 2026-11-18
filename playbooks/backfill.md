@@ -28,10 +28,11 @@ rebuilds the full 7-day window and rewrites the lake files; it is safe to run
 while the API is serving because readers open the parquet through fresh
 DuckDB cursors.
 
-Alternative trigger path: the deploy workflow (`.github/workflows/deploy.yml`)
-has a `refresh datalake once` step that executes the same job whenever
-`FIRMS_MAP_KEY` and `OPENAQ_API_KEY` are configured — so `gh workflow run`
-re-deploys *and* refreshes the lake in one shot.
+Trigger paths: the Cloud Scheduler job `trigger-ingestion`
+(`google_cloud_scheduler_job.trigger_ingestion` in `infra/main.tf`) executes
+the job every 2 hours, which is the only automatic
+refresh. After a deploy, or to bootstrap a fresh environment without waiting
+for the next tick, run the job manually as shown above.
 
 ## Local equivalent
 
