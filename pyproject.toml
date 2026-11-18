@@ -1,5 +1,5 @@
 [tool.uv.workspace]
-members = ["packages/shared-schemas", "services/ingestion"]
+members = ["packages/shared-schemas", "services/ingestion", "services/api"]
 
 [project]
 name = "inversa-home-challenge"
@@ -9,6 +9,7 @@ version = "0.1.0"
 dev = [
     "inversa-schemas",
     "inversa-ingestion",
+    "inversa-api",
     "mypy",
     "pytest",
     "pytest-asyncio",
@@ -18,6 +19,7 @@ dev = [
 [tool.uv.sources]
 inversa-schemas = { workspace = true }
 inversa-ingestion = { workspace = true }
+inversa-api = { workspace = true }
 
 [tool.ruff]
 line-length = 100
@@ -36,6 +38,8 @@ plugins = ["pydantic.mypy"]
 mypy_path = [
     "services/ingestion/src",
     "services/ingestion/tests",
+    "services/api/src",
+    "services/api/tests",
     "packages/shared-schemas/src",
     "packages/shared-schemas/tests",
 ]
@@ -44,4 +48,4 @@ exclude = ["packages/shared-schemas/src/inversa"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "session"
-testpaths = ["packages/shared-schemas/tests", "services/ingestion/tests"]
+testpaths = ["packages/shared-schemas/tests", "services/ingestion/tests", "services/api/tests"]
