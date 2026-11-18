@@ -15,12 +15,8 @@ from inversa.v1 import telemetry_pb2 as telemetry
 BASE_URL: Final = "https://api.open-meteo.com/v1/forecast"
 HOURLY_VARIABLES: Final = "wind_speed_10m,wind_direction_10m,boundary_layer_height"
 
+
 Point = tuple[float, float]
-
-
-def _rounded(point: Point) -> Point:
-    lat, lon = grid_point(point[0], point[1])
-    return (float(lat), float(lon))
 
 
 def points_from_frames(*frames: pl.DataFrame | None) -> list[Point]:
@@ -99,3 +95,8 @@ async def collect(
             except ValidationError:
                 rejected += 1
     return CollectorResult(df=wind_rows(rows), rejected=rejected)
+
+
+def _rounded(point: Point) -> Point:
+    lat, lon = grid_point(point[0], point[1])
+    return (float(lat), float(lon))
