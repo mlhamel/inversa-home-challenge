@@ -1,3 +1,4 @@
+"""Parquet datalake writes with a per-run ingestion log."""
 from __future__ import annotations
 
 from datetime import datetime
@@ -18,6 +19,7 @@ LOG_SCHEMA: Final[pl.Schema] = pl.Schema({
 
 
 class SourceSpec(NamedTuple):
+    """Parquet layout facts for one source: folder, file prefix, known latency."""
     folder: str
     prefix: str
     latency_minutes: int
@@ -38,6 +40,7 @@ def record_batch(
     run_at: datetime,
     rejected: int = 0,
 ) -> list[Path]:
+    """Write date-partitioned Parquet and append the run log; return written paths."""
     spec = SOURCE_SPECS[source]
     paths: list[Path] = []
     if df.height:
@@ -58,6 +61,7 @@ def record_batch(
 
 
 def record_failure(root: Path, *, source: str, run_at: datetime) -> None:
+    """Append a failed-run log entry with zero records."""
     _append_log(root, source=source, run_at=run_at, records=0, latest=None, status="failed")
 
 

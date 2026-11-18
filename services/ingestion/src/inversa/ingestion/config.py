@@ -1,3 +1,4 @@
+"""Environment-driven ingestion settings."""
 from __future__ import annotations
 
 import os
@@ -8,10 +9,11 @@ from pydantic import BaseModel, ConfigDict
 
 
 class ConfigError(ValueError):
-    pass
+    """Raised when environment configuration is missing or malformed."""
 
 
 class Settings(BaseModel):
+    """Frozen ingestion configuration parsed from the environment."""
     model_config = ConfigDict(frozen=True)
 
     bbox: tuple[float, float, float, float]
@@ -21,10 +23,12 @@ class Settings(BaseModel):
 
     @property
     def bbox_str(self) -> str:
+        """Return bbox as the comma-joined string FIRMS and OpenAQ query params expect."""
         return ",".join(str(value) for value in self.bbox)
 
 
 def load_settings(env: Mapping[str, str] | None = None) -> Settings:
+    """Build Settings from a mapping (defaults to os.environ)."""
     source = os.environ if env is None else env
     raw = source.get("BBOX", "")
     parts = raw.split(",")
