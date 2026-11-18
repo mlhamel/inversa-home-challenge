@@ -67,6 +67,7 @@ cp .env.example .env          # BBOX, DATA_DIR, FIRMS_MAP_KEY, OPENAQ_API_KEY
 make proto                    # lint .protos + regenerate Python/TS bindings
 make verify                   # protolint + prek/ruff + mypy --strict + pytest
 make backfill                 # 7 days of real Parquet into ./.local_datalake
+make serve                    # API on :8000 + web UI on :3000 — Ctrl-C stops both
 ```
 
 ## Documentation
