@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ChatDrawer, { type ChatMessageData } from "../components/ChatDrawer";
 import EvidenceInspector from "../components/EvidenceInspector";
 import MapCanvas, { type MapPadding } from "../components/MapCanvas";
+import MapLegend from "../components/MapLegend";
 import TimelineDock from "../components/TimelineDock";
 import { fetchSnapshot, fetchTimelineSummary } from "../lib/api";
 import {
@@ -185,6 +186,8 @@ export default function Page() {
         bounds={focusBounds}
         padding={mapPadding}
       />
+
+      <MapLegend />
 
       <header className="absolute left-3 top-3 z-20 flex flex-col items-start gap-2">
         <div className="rounded-lg panel border px-3 py-2 text-sm">
