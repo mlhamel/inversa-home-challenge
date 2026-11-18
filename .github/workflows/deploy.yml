@@ -91,34 +91,34 @@ jobs:
         run: |
           docker build \
             -f services/api/Dockerfile \
-            -t "$REGISTRY/inversa/backend:${{ steps.tags.outputs.sha_tag }}" \
-            -t "$REGISTRY/inversa/backend:latest" \
+            -t "$REGISTRY/$PROJECT_ID/inversa/backend:${{ steps.tags.outputs.sha_tag }}" \
+            -t "$REGISTRY/$PROJECT_ID/inversa/backend:latest" \
             .
 
       - name: push backend image
-        run: docker push --all-tags "$REGISTRY/inversa/backend"
+        run: docker push --all-tags "$REGISTRY/$PROJECT_ID/inversa/backend"
 
       - name: build ingestion image
         run: |
           docker build \
             -f services/ingestion/Dockerfile \
-            -t "$REGISTRY/inversa/ingestion:${{ steps.tags.outputs.sha_tag }}" \
-            -t "$REGISTRY/inversa/ingestion:latest" \
+            -t "$REGISTRY/$PROJECT_ID/inversa/ingestion:${{ steps.tags.outputs.sha_tag }}" \
+            -t "$REGISTRY/$PROJECT_ID/inversa/ingestion:latest" \
             .
 
       - name: push ingestion image
-        run: docker push --all-tags "$REGISTRY/inversa/ingestion"
+        run: docker push --all-tags "$REGISTRY/$PROJECT_ID/inversa/ingestion"
 
       - name: build frontend image
         run: |
           docker build \
             -f apps/web/Dockerfile \
-            -t "$REGISTRY/inversa/frontend:${{ steps.tags.outputs.sha_tag }}" \
-            -t "$REGISTRY/inversa/frontend:latest" \
+            -t "$REGISTRY/$PROJECT_ID/inversa/frontend:${{ steps.tags.outputs.sha_tag }}" \
+            -t "$REGISTRY/$PROJECT_ID/inversa/frontend:latest" \
             .
 
       - name: push frontend image
-        run: docker push --all-tags "$REGISTRY/inversa/frontend"
+        run: docker push --all-tags "$REGISTRY/$PROJECT_ID/inversa/frontend"
 
       - uses: hashicorp/setup-terraform@v3
 
@@ -130,9 +130,9 @@ jobs:
 
       - name: terraform plan and apply
         env:
-          TF_VAR_backend_image: "${{ env.REGISTRY }}/inversa/backend:${{ steps.tags.outputs.sha_tag }}"
-          TF_VAR_frontend_image: "${{ env.REGISTRY }}/inversa/frontend:${{ steps.tags.outputs.sha_tag }}"
-          TF_VAR_ingestion_image: "${{ env.REGISTRY }}/inversa/ingestion:${{ steps.tags.outputs.sha_tag }}"
+          TF_VAR_backend_image: "${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/inversa/backend:${{ steps.tags.outputs.sha_tag }}"
+          TF_VAR_frontend_image: "${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/inversa/frontend:${{ steps.tags.outputs.sha_tag }}"
+          TF_VAR_ingestion_image: "${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/inversa/ingestion:${{ steps.tags.outputs.sha_tag }}"
           TF_VAR_firms_map_key: ${{ secrets.FIRMS_MAP_KEY }}
           TF_VAR_openaq_api_key: ${{ secrets.OPENAQ_API_KEY }}
           TF_VAR_agent_api_key: ${{ secrets.AGENT_API_KEY }}
