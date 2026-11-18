@@ -1,0 +1,150 @@
+name: deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-main
+  cancel-in-progress: false
+
+env:
+  PROJECT_ID: inversa-home-challenge
+  REGION: northamerica-northeast1
+  REGISTRY: northamerica-northeast1-docker.pkg.dev
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v6
+      - uses: bufbuild/buf-setup-action@v1
+      - name: install protolint
+        run: |
+          cd /tmp
+          curl -sSLO https://github.com/yoheimuta/protolint/releases/download/v0.58.0/protolint_0.58.0_linux_amd64.tar.gz
+          curl -sSLO https://github.com/yoheimuta/protolint/releases/download/v0.58.0/checksums.txt
+          grep 'protolint_0.58.0_linux_amd64.tar.gz' checksums.txt | sha256sum --check --strict
+          tar -xzf protolint_0.58.0_linux_amd64.tar.gz
+          mkdir -p "$HOME/.local/bin"
+          install -m 0755 protolint "$HOME/.local/bin/protolint"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: install protoc
+        run: |
+          cd /tmp
+          curl -sSLO https://github.com/protocolbuffers/protobuf/releases/download/v36.2/protoc-36.2-linux-x86_64.zip
+          unzip -oq protoc-36.2-linux-x86_64.zip -d protoc-36.2
+          mkdir -p "$HOME/.local/bin"
+          install -m 0755 protoc-36.2/bin/protoc "$HOME/.local/bin/protoc"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: install web deps
+        run: npm ci --prefix apps/web
+      - name: install prek
+        run: uv tool install prek
+      - name: make verify
+        run: make verify
+      - name: web typecheck
+        run: npm run typecheck --prefix apps/web
+      - name: web tests
+        run: npm run test --prefix apps/web
+
+  deploy:
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v5
+
+      - id: tags
+        run: echo "sha_tag=sha-$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          token_format: access_token
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SA }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: log in to artifact registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: oauth2accesstoken
+          password: ${{ steps.auth.outputs.access_token }}
+
+      - name: build backend image
+        run: |
+          docker build \
+            -f services/api/Dockerfile \
+            -t "$REGISTRY/inversa/backend:${{ steps.tags.outputs.sha_tag }}" \
+            -t "$REGISTRY/inversa/backend:latest" \
+            .
+
+      - name: push backend image
+        run: docker push --all-tags "$REGISTRY/inversa/backend"
+
+      - name: build ingestion image
+        run: |
+          docker build \
+            -f services/ingestion/Dockerfile \
+            -t "$REGISTRY/inversa/ingestion:${{ steps.tags.outputs.sha_tag }}" \
+            -t "$REGISTRY/inversa/ingestion:latest" \
+            .
+
+      - name: push ingestion image
+        run: docker push --all-tags "$REGISTRY/inversa/ingestion"
+
+      - name: build frontend image
+        run: |
+          docker build \
+            -f apps/web/Dockerfile \
+            -t "$REGISTRY/inversa/frontend:${{ steps.tags.outputs.sha_tag }}" \
+            -t "$REGISTRY/inversa/frontend:latest" \
+            .
+
+      - name: push frontend image
+        run: docker push --all-tags "$REGISTRY/inversa/frontend"
+
+      - uses: hashicorp/setup-terraform@v3
+
+      - name: terraform fmt check
+        run: terraform -chdir=infra fmt -check
+
+      - name: terraform init
+        run: terraform -chdir=infra init -input=false
+
+      - name: terraform plan and apply
+        env:
+          TF_VAR_backend_image: "${{ env.REGISTRY }}/inversa/backend:${{ steps.tags.outputs.sha_tag }}"
+          TF_VAR_frontend_image: "${{ env.REGISTRY }}/inversa/frontend:${{ steps.tags.outputs.sha_tag }}"
+          TF_VAR_ingestion_image: "${{ env.REGISTRY }}/inversa/ingestion:${{ steps.tags.outputs.sha_tag }}"
+          TF_VAR_firms_map_key: ${{ secrets.FIRMS_MAP_KEY }}
+          TF_VAR_openaq_api_key: ${{ secrets.OPENAQ_API_KEY }}
+          TF_VAR_agent_api_key: ${{ secrets.AGENT_API_KEY }}
+          TF_VAR_agent_model: ${{ vars.AGENT_MODEL }}
+        run: |
+          terraform -chdir=infra fmt -check
+          terraform -chdir=infra init -input=false
+          terraform -chdir=infra validate
+          terraform -chdir=infra plan -input=false -no-color -out=tfplan
+          terraform -chdir=infra apply -input=false -auto-approve tfplan
+          rm -f infra/tfplan
+
+      - name: refresh datalake once
+        if: ${{ secrets.FIRMS_MAP_KEY != '' && secrets.OPENAQ_API_KEY != '' }}
+        run: gcloud run jobs execute ingestion-job --region "$REGION" --wait
