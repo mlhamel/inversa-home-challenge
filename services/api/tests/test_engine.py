@@ -19,7 +19,7 @@ from inversa.api.db.engine import (
 )
 from inversa.ingestion.contract import AIR_QUALITY_SCHEMA
 from inversa.ingestion.storage import record_batch
-from scene import RUN_AT
+from scene import RUN_AT, ts
 
 CURSOR_NOT_INITIALIZED = (
     "Engine not initialized: the app lifespan or the test fixture "
@@ -85,13 +85,18 @@ def test_logical_views_keep_latest_ingested_per_key(booted_engine: Settings) -> 
         fires = cursor.execute("SELECT fire_id, frp FROM v_fires ORDER BY fire_id").fetchall()
         air_rows = scalar(cursor, "SELECT count(*) FROM v_air_quality")
         weather = cursor.execute(
-            "SELECT grid_id, boundary_layer_height FROM v_weather ORDER BY grid_id"
+            "SELECT grid_id, observed_at, boundary_layer_height "
+            "FROM v_weather ORDER BY grid_id, observed_at"
         ).fetchall()
     finally:
         cursor.close()
     assert fires == [("FIRE-1", 55.0), ("FIRE-2", 80.0)]
     assert air_rows == 5
-    assert weather == [("WX-DOWN", 400.0), ("WX-HOME", 600.0)]
+    assert weather == [
+        ("WX-DOWN", ts(13, 58), 400.0),
+        ("WX-DOWN", ts(14, 50), 350.0),
+        ("WX-HOME", ts(13, 45), 600.0),
+    ]
 
 
 def test_missing_source_tables_boot_as_empty_stubs(tmp_path: Path) -> None:

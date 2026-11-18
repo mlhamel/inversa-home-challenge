@@ -155,6 +155,16 @@ def _write_scene(root: Path) -> None:
                 "wind_direction_10m": 180.0,
                 "boundary_layer_height": 400.0,
             },
+            {
+                "grid_id": "WX-DOWN",
+                "observed_at": ts(14, 50),
+                "ingested_at": ts(14, 51),
+                "lat": 37.0,
+                "lon": -122.0,
+                "wind_speed_10m": 12.0,
+                "wind_direction_10m": 90.0,
+                "boundary_layer_height": 350.0,
+            },
         ],
         schema=WEATHER_SCHEMA,
     )
