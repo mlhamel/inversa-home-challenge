@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
@@ -102,6 +103,69 @@ async def test_backfill_logs_failure_when_openaq_fails(
     assert not (root / "air_quality").exists()
 
 
+async def test_backfill_emits_info_flow_lines(
+    settings: Settings,
+    run_at: datetime,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    _mount_transport(
+        monkeypatch,
+        _handler(
+            recent=EMPTY_FIRMS_CSV,
+            older=OLDER_ROWS,
+            openaq_locations=httpx.Response(200, json={"results": [openaq_location()]}),
+        ),
+    )
+    with caplog.at_level(logging.INFO):
+        statuses = await run_backfill(settings, run_at=run_at)
+
+    assert statuses == {"nasa_firms": "success", "openaq": "success", "open_meteo": "success"}
+    messages = [record.message for record in caplog.records]
+    starts = [message for message in messages if message.startswith("backfill start:")]
+    assert len(starts) == 1
+    assert f"BBOX={TEST_BBOX}" in starts[0]
+    assert "window=2026-11-10..2026-11-17" in starts[0]
+    assert f"dir={settings.data_dir}" in starts[0]
+    assert "nasa_firms: range 4d: 0 fires, 0 rejected" in messages
+    assert "nasa_firms: range 5d: 2 fires, 0 rejected" in messages
+    assert "openaq: 1 stations in BBOX" in messages
+    station_lines = [message for message in messages if message.startswith("openaq: station 2009:")]
+    assert station_lines == ["openaq: station 2009: 1 rows, 0 rejected"]
+    assert any(message.startswith("open_meteo: ") for message in messages)
+    assert any(
+        message.startswith("open_meteo: 4 rows, 0 rejected, ") for message in messages
+    )
+    summaries = [message for message in messages if message.startswith("backfill complete:")]
+    assert len(summaries) == 1
+    assert "nasa_firms=success openaq=success open_meteo=success" in summaries[0]
+    assert "wall " in summaries[0] and summaries[0].endswith(")")
+
+
+async def test_backfill_logs_source_failure(
+    settings: Settings,
+    run_at: datetime,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    _mount_transport(
+        monkeypatch,
+        _handler(
+            recent=EMPTY_FIRMS_CSV,
+            older=OLDER_ROWS,
+            openaq_locations=httpx.Response(500, text="boom"),
+        ),
+    )
+    with caplog.at_level(logging.INFO):
+        statuses = await run_backfill(settings, run_at=run_at)
+
+    assert statuses["openaq"] == "failed"
+    messages = [record.message for record in caplog.records]
+    assert "storage: openaq: run failed, recorded in ingestion log" in messages
+    summaries = [message for message in messages if message.startswith("backfill complete:")]
+    assert "openaq=failed" in summaries[0]
+
+
 def _handler(
     *, recent: str, older: str, openaq_locations: httpx.Response
 ) -> Callable[[httpx.Request], httpx.Response]:
@@ -120,9 +184,7 @@ def _handler(
         lons = request.url.params["longitude"].split(",")
         return httpx.Response(
             200,
-            json=[
-                meteo_batch(float(lat), float(lon)) for lat, lon in zip(lats, lons, strict=True)
-            ],
+            json=[meteo_batch(float(lat), float(lon)) for lat, lon in zip(lats, lons, strict=True)],
         )
 
     return handler
