@@ -5,7 +5,18 @@ import maplibregl, { Map as MapLibre } from "maplibre-gl";
 import { MapboxOverlay } from "@deck.gl/mapbox";
 import { IconLayer, ScatterplotLayer } from "@deck.gl/layers";
 import type { PickingInfo } from "@deck.gl/core";
-import { clamp, pm25DeckColor } from "../lib/theme";
+import {
+  clamp,
+  FIRE_FILL_ALPHA,
+  FIRE_FILL_COLOR,
+  FIRE_LOW_CONFIDENCE_ALPHA,
+  FIRE_OUTLINE_COLOR,
+  OUTLIER_RING_COLOR,
+  pm25DeckColor,
+  STALE_RING_COLOR,
+  STATION_OUTLINE_COLOR,
+  WIND_COLOR,
+} from "../lib/theme";
 import type {
   Snapshot,
   SnapshotFireRow,
@@ -214,7 +225,7 @@ export default function MapCanvas({
             sizeUnits: "pixels",
             getSize: 26,
             getColor: (d) =>
-              d.quality_flag === "outlier" ? [196, 150, 255] : [168, 178, 188],
+              d.quality_flag === "outlier" ? OUTLIER_RING_COLOR : STALE_RING_COLOR,
             updateTriggers: {
               getSize: atlas,
               getIcon: atlas,
@@ -247,7 +258,7 @@ export default function MapCanvas({
           ),
         getAngle: (d) =>
           (360 - (((d.wind_direction_10m ?? 0) + 180) % 360)) % 360,
-        getColor: [143, 214, 249, 210],
+        getColor: [...WIND_COLOR, 210],
         opacity: 0.85,
         updateTriggers: {
           getIcon: atlas,
@@ -264,12 +275,10 @@ export default function MapCanvas({
         getPosition: (d) => [d.lon, d.lat],
         getRadius: (d) => 600 + Math.sqrt(Math.max(d.frp ?? 8, 8)) * 260,
         getFillColor: (d) => [
-          255,
-          86,
-          48,
-          d.confidence === "low" ? 140 : 230,
+          ...FIRE_FILL_COLOR,
+          d.confidence === "low" ? FIRE_LOW_CONFIDENCE_ALPHA : FIRE_FILL_ALPHA,
         ],
-        getLineColor: [255, 176, 92],
+        getLineColor: FIRE_OUTLINE_COLOR,
         lineWidthMinPixels: 1,
       }),
       new ScatterplotLayer<SnapshotStationRow>({
@@ -281,7 +290,7 @@ export default function MapCanvas({
         radiusMaxPixels: 7,
         getPosition: (d) => [d.lon, d.lat],
         getFillColor: (d) => pm25DeckColor(d.pm25),
-        getLineColor: [10, 14, 20],
+        getLineColor: STATION_OUTLINE_COLOR,
         lineWidthMinPixels: 1,
       }),
       ...(flagRing ? [flagRing] : []),
