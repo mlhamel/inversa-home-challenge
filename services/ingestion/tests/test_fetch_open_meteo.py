@@ -7,11 +7,11 @@ from typing import Any, Final
 import httpx
 import polars as pl
 import pytest
-from ingestion import fetch_open_meteo
-from ingestion.config import Settings
-from ingestion.contract import WEATHER_SCHEMA
-from ingestion.result import CollectorError
-from ingestion.validate import grid_id
+from inversa.ingestion import fetch_open_meteo
+from inversa.ingestion.config import Settings
+from inversa.ingestion.contract import WEATHER_SCHEMA
+from inversa.ingestion.result import CollectorError
+from inversa.ingestion.validate import grid_id
 from samples import (
     METEO_DIRECTIONS,
     METEO_HEIGHTS,
@@ -24,16 +24,6 @@ from samples import (
 GRID_A: Final[tuple[float, float]] = (37.75, -122.5)
 GRID_B: Final[tuple[float, float]] = (38.5, -121.5)
 WINDOW_START: Final[datetime] = RUN_AT - timedelta(days=7)
-
-
-def _capturing_handler(
-    payload: Any, captured: list[httpx.Request]
-) -> Callable[[httpx.Request], httpx.Response]:
-    def handler(request: httpx.Request) -> httpx.Response:
-        captured.append(request)
-        return httpx.Response(200, json=payload)
-
-    return handler
 
 
 def test_points_from_frames_rounds_dedupes_and_sorts() -> None:
@@ -195,3 +185,13 @@ async def test_collect_without_points_makes_no_request(
     assert result.df.schema == WEATHER_SCHEMA
     assert result.rejected == 0
     assert captured == []
+
+
+def _capturing_handler(
+    payload: Any, captured: list[httpx.Request]
+) -> Callable[[httpx.Request], httpx.Response]:
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured.append(request)
+        return httpx.Response(200, json=payload)
+
+    return handler

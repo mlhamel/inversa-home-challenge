@@ -6,10 +6,10 @@ from pathlib import Path
 
 import httpx
 import pytest
-from ingestion import fetch_firms
-from ingestion.config import Settings, load_settings
-from ingestion.contract import FIRES_SCHEMA
-from ingestion.result import CollectorError
+from inversa.ingestion import fetch_firms
+from inversa.ingestion.config import Settings, load_settings
+from inversa.ingestion.contract import FIRES_SCHEMA
+from inversa.ingestion.result import CollectorError
 from samples import (
     EMPTY_FIRMS_CSV,
     FIRMS_HEADER,
@@ -22,14 +22,6 @@ from samples import (
     RUN_AT,
     TEST_BBOX,
 )
-
-
-def _capture(captured: list[httpx.Request], body: str) -> Callable[[httpx.Request], httpx.Response]:
-    def handler(request: httpx.Request) -> httpx.Response:
-        captured.append(request)
-        return httpx.Response(200, text=body)
-
-    return handler
 
 
 def test_collect_sync_with_empty_payload_yields_empty_frame() -> None:
@@ -125,3 +117,11 @@ async def test_collect_raises_on_http_error(settings: Settings) -> None:
     async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
         with pytest.raises(httpx.HTTPStatusError):
             await fetch_firms.collect(client, settings, ingested_at=RUN_AT, day_range=1)
+
+
+def _capture(captured: list[httpx.Request], body: str) -> Callable[[httpx.Request], httpx.Response]:
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured.append(request)
+        return httpx.Response(200, text=body)
+
+    return handler

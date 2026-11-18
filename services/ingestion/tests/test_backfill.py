@@ -8,8 +8,8 @@ from typing import Any, Final
 import httpx
 import polars as pl
 import pytest
-from ingestion.backfill import backfill as run_backfill
-from ingestion.config import Settings
+from inversa.ingestion.backfill import backfill as run_backfill
+from inversa.ingestion.config import Settings
 from samples import (
     EMPTY_FIRMS_CSV,
     FIRMS_HEADER,
@@ -26,49 +26,6 @@ from samples import (
 FIRMS_OLDER_PATH: Final[str] = f"/{TEST_BBOX}/5/2026-11-14"
 OLDER_ROWS: Final[str] = "\n".join([FIRMS_HEADER, FIRMS_ROW_A, FIRMS_ROW_D])
 PARTIAL_ROWS: Final[str] = "\n".join([FIRMS_HEADER, FIRMS_ROW_A, FIRMS_ROW_BAD_CONFIDENCE])
-
-
-def _handler(
-    *, recent: str, older: str, openaq_locations: httpx.Response
-) -> Callable[[httpx.Request], httpx.Response]:
-    def handler(request: httpx.Request) -> httpx.Response:
-        path = request.url.path
-        if path.endswith("/4"):
-            return httpx.Response(200, text=recent)
-        if path.endswith(FIRMS_OLDER_PATH):
-            return httpx.Response(200, text=older)
-        if path.endswith("/v3/locations"):
-            return openaq_locations
-        if "/v3/sensors/" in path:
-            entry = openaq_hours_entry(value=8.5, utc=FRESH_UTC)
-            return httpx.Response(200, json={"results": [entry]})
-        lats = request.url.params["latitude"].split(",")
-        lons = request.url.params["longitude"].split(",")
-        return httpx.Response(
-            200,
-            json=[
-                meteo_batch(float(lat), float(lon)) for lat, lon in zip(lats, lons, strict=True)
-            ],
-        )
-
-    return handler
-
-
-def _mount_transport(
-    monkeypatch: pytest.MonkeyPatch, handler: Callable[[httpx.Request], httpx.Response]
-) -> None:
-    transport = httpx.MockTransport(handler)
-    client_class = httpx.AsyncClient
-
-    def factory(**kwargs: Any) -> httpx.AsyncClient:
-        kwargs.pop("transport", None)
-        return client_class(transport=transport, **kwargs)
-
-    monkeypatch.setattr(httpx, "AsyncClient", factory)
-
-
-def _log(root: Path) -> pl.DataFrame:
-    return pl.read_parquet(root / "meta" / "ingestion_log.parquet")
 
 
 async def test_backfill_records_all_three_sources(
@@ -143,3 +100,46 @@ async def test_backfill_logs_failure_when_openaq_fails(
     assert log["status"].to_list() == ["success", "failed", "success"]
     assert log["records_written"].to_list() == [2, 0, 4]
     assert not (root / "air_quality").exists()
+
+
+def _handler(
+    *, recent: str, older: str, openaq_locations: httpx.Response
+) -> Callable[[httpx.Request], httpx.Response]:
+    def handler(request: httpx.Request) -> httpx.Response:
+        path = request.url.path
+        if path.endswith("/4"):
+            return httpx.Response(200, text=recent)
+        if path.endswith(FIRMS_OLDER_PATH):
+            return httpx.Response(200, text=older)
+        if path.endswith("/v3/locations"):
+            return openaq_locations
+        if "/v3/sensors/" in path:
+            entry = openaq_hours_entry(value=8.5, utc=FRESH_UTC)
+            return httpx.Response(200, json={"results": [entry]})
+        lats = request.url.params["latitude"].split(",")
+        lons = request.url.params["longitude"].split(",")
+        return httpx.Response(
+            200,
+            json=[
+                meteo_batch(float(lat), float(lon)) for lat, lon in zip(lats, lons, strict=True)
+            ],
+        )
+
+    return handler
+
+
+def _mount_transport(
+    monkeypatch: pytest.MonkeyPatch, handler: Callable[[httpx.Request], httpx.Response]
+) -> None:
+    transport = httpx.MockTransport(handler)
+    client_class = httpx.AsyncClient
+
+    def factory(**kwargs: Any) -> httpx.AsyncClient:
+        kwargs.pop("transport", None)
+        return client_class(transport=transport, **kwargs)
+
+    monkeypatch.setattr(httpx, "AsyncClient", factory)
+
+
+def _log(root: Path) -> pl.DataFrame:
+    return pl.read_parquet(root / "meta" / "ingestion_log.parquet")

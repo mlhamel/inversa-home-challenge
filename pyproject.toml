@@ -30,6 +30,15 @@ select = ["E", "F", "I", "B", "UP", "ASYNC"]
 [tool.mypy]
 python_version = "3.12"
 strict = true
+namespace_packages = true
+explicit_package_bases = true
+plugins = ["pydantic.mypy"]
+mypy_path = [
+    "services/ingestion/src",
+    "services/ingestion/tests",
+    "packages/shared-schemas/src",
+    "packages/shared-schemas/tests",
+]
 exclude = ["packages/shared-schemas/src/inversa"]
 
 [tool.pytest.ini_options]

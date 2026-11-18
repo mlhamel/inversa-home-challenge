@@ -31,6 +31,6 @@ test:
 	fi
 
 backfill:
-	uv run python -m ingestion.backfill
+	uv run python -m inversa.ingestion.backfill
 
 verify: proto lint typecheck test

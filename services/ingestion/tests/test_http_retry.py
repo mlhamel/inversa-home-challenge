@@ -4,27 +4,8 @@ from collections.abc import Callable
 
 import httpx
 import pytest
-from ingestion import http_retry
-from ingestion.http_retry import get_with_retry
-
-
-def _scripted(
-    script: list[httpx.Response | BaseException], captured: list[httpx.Request]
-) -> Callable[[httpx.Request], httpx.Response]:
-    def handler(request: httpx.Request) -> httpx.Response:
-        captured.append(request)
-        step = script.pop(0)
-        if isinstance(step, BaseException):
-            raise step
-        return step
-
-    return handler
-
-
-def _client(
-    script: list[httpx.Response | BaseException], captured: list[httpx.Request]
-) -> httpx.AsyncClient:
-    return httpx.AsyncClient(transport=httpx.MockTransport(_scripted(script, captured)))
+from inversa.ingestion import http_retry
+from inversa.ingestion.http_retry import get_with_retry
 
 
 async def test_get_with_retry_succeeds_after_retryable_status(
@@ -216,3 +197,22 @@ async def test_get_with_retry_discards_stale_rate_limit_hint(
     assert response.status_code == 200
     assert slept[0] == 30.0
     assert 1.0 <= slept[1] <= 1.25
+
+
+def _scripted(
+    script: list[httpx.Response | BaseException], captured: list[httpx.Request]
+) -> Callable[[httpx.Request], httpx.Response]:
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured.append(request)
+        step = script.pop(0)
+        if isinstance(step, BaseException):
+            raise step
+        return step
+
+    return handler
+
+
+def _client(
+    script: list[httpx.Response | BaseException], captured: list[httpx.Request]
+) -> httpx.AsyncClient:
+    return httpx.AsyncClient(transport=httpx.MockTransport(_scripted(script, captured)))

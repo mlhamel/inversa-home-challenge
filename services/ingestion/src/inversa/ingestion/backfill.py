@@ -1,3 +1,4 @@
+"""Seven-day backfill orchestration across FIRMS, OpenAQ, and Open-Meteo."""
 from __future__ import annotations
 
 import asyncio
@@ -6,13 +7,12 @@ from typing import Final
 
 import httpx
 import polars as pl
-
-from ingestion import fetch_firms, fetch_open_meteo, fetch_openaq
-from ingestion.config import Settings, load_settings
-from ingestion.contract import AIR_QUALITY_SCHEMA
-from ingestion.http_retry import Pacer
-from ingestion.result import CollectorError, CollectorResult
-from ingestion.storage import record_batch, record_failure
+from inversa.ingestion import fetch_firms, fetch_open_meteo, fetch_openaq
+from inversa.ingestion.config import Settings, load_settings
+from inversa.ingestion.contract import AIR_QUALITY_SCHEMA
+from inversa.ingestion.http_retry import Pacer
+from inversa.ingestion.result import CollectorError, CollectorResult
+from inversa.ingestion.storage import record_batch, record_failure
 
 BACKFILL_DAYS: Final[int] = 7
 FIRMS_RECENT_RANGE: Final[int] = 4
@@ -27,63 +27,8 @@ HANDLED_ERRORS: Final[tuple[type[BaseException], ...]] = (
 )
 
 
-async def _collect_firms(
-    client: httpx.AsyncClient, settings: Settings, run_at: datetime
-) -> tuple[pl.DataFrame, int]:
-    results = [
-        await fetch_firms.collect(
-            client, settings, ingested_at=run_at, day_range=FIRMS_RECENT_RANGE
-        ),
-        await fetch_firms.collect(
-            client,
-            settings,
-            ingested_at=run_at,
-            day_range=FIRMS_OLDER_RANGE,
-            end_date=(run_at - FIRMS_OLDER_OFFSET).date(),
-        ),
-    ]
-    frames = [result.df for result in results]
-    df = pl.concat(frames, how="vertical").unique(
-        subset=["fire_id"], keep="first", maintain_order=True
-    )
-    return df, sum(result.rejected for result in results)
-
-
-async def _collect_openaq_hours(
-    client: httpx.AsyncClient,
-    settings: Settings,
-    run_at: datetime,
-    start: datetime,
-    pacer: Pacer,
-) -> tuple[pl.DataFrame, int]:
-    stations = await fetch_openaq.collect_stations(
-        client, api_key=settings.openaq_api_key, bbox=settings.bbox_str, pacer=pacer
-    )
-    if not stations:
-        return pl.DataFrame(schema=AIR_QUALITY_SCHEMA), 0
-    semaphore = asyncio.Semaphore(fetch_openaq.CONCURRENCY)
-
-    async def one(station: fetch_openaq.Station) -> CollectorResult:
-        async with semaphore:
-            return await fetch_openaq.collect_sensor_hours(
-                client,
-                api_key=settings.openaq_api_key,
-                station=station,
-                datetime_from=start,
-                datetime_to=run_at,
-                ingested_at=run_at,
-                pacer=pacer,
-            )
-
-    responses = await asyncio.gather(*(one(station) for station in stations))
-    frames = [response.df for response in responses]
-    return (
-        pl.concat(frames, how="vertical"),
-        sum(response.rejected for response in responses),
-    )
-
-
 async def backfill(settings: Settings, *, run_at: datetime | None = None) -> dict[str, str]:
+    """Run one backfill pass over all sources; return per-source status."""
     moment = (run_at or datetime.now(UTC)).astimezone(UTC)
     start = moment - timedelta(days=BACKFILL_DAYS)
     statuses: dict[str, str] = {}
@@ -145,12 +90,69 @@ async def backfill(settings: Settings, *, run_at: datetime | None = None) -> dic
 
 
 def main() -> None:
+    """CLI entry point: load settings, run the backfill, print per-source status."""
     from dotenv import load_dotenv
 
     load_dotenv()
     summary = asyncio.run(backfill(load_settings()))
     for source, status in sorted(summary.items()):
         print(f"{source}: {status}")
+
+
+async def _collect_firms(
+    client: httpx.AsyncClient, settings: Settings, run_at: datetime
+) -> tuple[pl.DataFrame, int]:
+    results = [
+        await fetch_firms.collect(
+            client, settings, ingested_at=run_at, day_range=FIRMS_RECENT_RANGE
+        ),
+        await fetch_firms.collect(
+            client,
+            settings,
+            ingested_at=run_at,
+            day_range=FIRMS_OLDER_RANGE,
+            end_date=(run_at - FIRMS_OLDER_OFFSET).date(),
+        ),
+    ]
+    frames = [result.df for result in results]
+    df = pl.concat(frames, how="vertical").unique(
+        subset=["fire_id"], keep="first", maintain_order=True
+    )
+    return df, sum(result.rejected for result in results)
+
+
+async def _collect_openaq_hours(
+    client: httpx.AsyncClient,
+    settings: Settings,
+    run_at: datetime,
+    start: datetime,
+    pacer: Pacer,
+) -> tuple[pl.DataFrame, int]:
+    stations = await fetch_openaq.collect_stations(
+        client, api_key=settings.openaq_api_key, bbox=settings.bbox_str, pacer=pacer
+    )
+    if not stations:
+        return pl.DataFrame(schema=AIR_QUALITY_SCHEMA), 0
+    semaphore = asyncio.Semaphore(fetch_openaq.CONCURRENCY)
+
+    async def one(station: fetch_openaq.Station) -> CollectorResult:
+        async with semaphore:
+            return await fetch_openaq.collect_sensor_hours(
+                client,
+                api_key=settings.openaq_api_key,
+                station=station,
+                datetime_from=start,
+                datetime_to=run_at,
+                ingested_at=run_at,
+                pacer=pacer,
+            )
+
+    responses = await asyncio.gather(*(one(station) for station in stations))
+    frames = [response.df for response in responses]
+    return (
+        pl.concat(frames, how="vertical"),
+        sum(response.rejected for response in responses),
+    )
 
 
 if __name__ == "__main__":
