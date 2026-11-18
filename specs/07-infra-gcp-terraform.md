@@ -13,9 +13,9 @@ depends_on: [spec-02-ingestion-pipelines, spec-05-fastapi-agent-gateway]
   - **GCS FUSE Volume Mount:** Mounts `google_storage_bucket.datalake` at `/mnt/data` (`read_only = true`).
   - Public IAM binding (`allUsers` -> `roles/run.invoker`) to provide the required shareable demo URL[cite: 1].
 - **`google_cloud_run_v2_job.ingestion_job`:**
-  - Executes `python -m ingestion.run_all` with `FIRMS_MAP_KEY`, `OPENAQ_API_KEY`, and `BBOX` environment variables.
+  - Executes `python -m inversa.ingestion.backfill` with `FIRMS_MAP_KEY`, `OPENAQ_API_KEY`, and `BBOX` environment variables.
 - **`google_cloud_scheduler_job.trigger_ingestion`:**
-  - Triggers `ingestion_job` every 30 minutes (`*/30 * * * *`).
+  - Triggers `ingestion_job` every 2 hours (`0 */2 * * *`).
 
 # 2. CI/CD Pipeline (`.github/workflows/deploy.yml`)
 - Triggered on push to `main`.

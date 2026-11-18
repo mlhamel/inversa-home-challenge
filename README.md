@@ -77,7 +77,7 @@ The deploy workflow (`.github/workflows/deploy.yml`) runs on every merge to `mai
 it re-runs the verify gate, builds/pushes the `backend`, `ingestion`, and `frontend`
 images to Artifact Registry, applies `infra/` with Terraform via keyless Workload
 Identity Federation, then executes the `ingestion-job` once so the demo has fresh
-data. Cloud Scheduler refreshes the datalake every 30 minutes (`*/30 * * * *`).
+data. Cloud Scheduler refreshes the datalake every 2 hours (`0 */2 * * *`).
 
 The only manual step is a one-time bootstrap — run from the repo root with an
 Owner-level account (creates the tfstate bucket, Artifact Registry repo, WIF
@@ -102,7 +102,7 @@ gh variable set AGENT_MODEL      --body 'openai:gpt-4o-mini'   # optional overri
 `/mnt/data` read-only, public invoker), `web-ui` (Next.js, proxies same-origin
 `/api/*` → `web-api`, preserving the zero-CORS design), `ingestion-job` (GCS FUSE
 read-write, writes ZSTD Parquet), the `${PROJECT_ID}-datalake` bucket with a 30-day
-lifecycle rule, the `*/30` scheduler, and Secret Manager entries for the optional
+lifecycle rule, the `0 */2 * * *` scheduler, and Secret Manager entries for the optional
 API keys (created only when the matching GitHub secret is non-empty; Cloud Run
 reads them via `value_source`, never plain env vars). Idle cost is ≈ $0 —
 `min-instances` 0 and no static IP. Local Terraform equivalent: `make infra-init`

@@ -14,6 +14,6 @@ output "datalake_bucket" {
 }
 
 output "ingestion_job_name" {
-  description = "Cloud Run job refreshed by the */30 scheduler and deploy runs."
+  description = "Cloud Run job refreshed by the `0 */2 * * *` scheduler and deploy runs."
   value       = google_cloud_run_v2_job.ingestion.name
 }
