@@ -1,6 +1,7 @@
 -- spec-04 tool 2 (get_station_timeseries): hourly PM2.5, local wind vector, and nearby
 -- fire activity for one OpenAQ station. No canonical SQL in the spec; designed here.
--- Hour buckets come from the station's own readings; the wind vector is the single
+-- Hour buckets are the union of PM2.5, wind, and fire hours, clamped by
+-- $start_ts/$end_ts; the wind vector is the single
 -- nearest grid point (within 0.5 degrees) of the bucket; fire activity excludes
 -- 'low' confidence detections within 0.5 degrees of the station.
 -- Parameters: $station_id (VARCHAR), $start_ts (TIMESTAMP), $end_ts (TIMESTAMP)
@@ -70,9 +71,9 @@ fires_ranked AS (
     ) = 1
 )
 SELECT
-    b.hour_bucket,
-    COALESCE(b.avg_pm25, NULL) AS avg_pm25,
-    COALESCE(b.max_pm25, NULL) AS max_pm25,
+    buckets.hour_bucket,
+    b.avg_pm25,
+    b.max_pm25,
     COALESCE(b.reading_count, 0) AS reading_count,
     COALESCE(b.valid_count, 0) AS valid_count,
     COALESCE(b.stale_count, 0) AS stale_count,
