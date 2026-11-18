@@ -12,6 +12,7 @@ dependencies = [
     "fastmcp>=2.10",
     "fastapi>=0.116",
     "pydantic>=2.7",
+    "pydantic-ai-slim[openai]>=1.0",
     "pytz>=2024.1",
 ]
 

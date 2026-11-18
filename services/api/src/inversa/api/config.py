@@ -13,10 +13,18 @@ class Settings(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     data_dir: Path
+    agent_model: str = "openai:gpt-4o-mini"
+    agent_base_url: str | None = None
+    agent_api_key: str | None = None
 
 
 def load_settings(env: Mapping[str, str] | None = None) -> Settings:
     """Build Settings from a mapping (defaults to os.environ)."""
     source = os.environ if env is None else env
     raw = source.get("DATA_DIR") or "./.local_datalake"
-    return Settings(data_dir=Path(raw))
+    return Settings(
+        data_dir=Path(raw),
+        agent_model=source.get("AGENT_MODEL") or "openai:gpt-4o-mini",
+        agent_base_url=source.get("AGENT_BASE_URL") or None,
+        agent_api_key=source.get("AGENT_API_KEY") or None,
+    )
