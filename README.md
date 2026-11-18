@@ -53,8 +53,8 @@ Phased build per [`specs/README.md` §2](specs/README.md) — one phase per PR:
 | --- | --- | --- |
 | 1. Contracts | `packages/proto` + `packages/shared-schemas`, buf codegen | ✅ Done |
 | 2. Ingestion & local datalake | `services/ingestion`, 7-day backfill | ✅ Done |
-| 3. DuckDB + FastMCP | `services/api` engine + `/mcp` | ⏳ Next |
-| 4. FastAPI + agent | REST + SSE chat, golden prompts | ⬜ Planned |
+| 3. DuckDB + FastMCP | `services/api` engine + `/mcp` | ✅ Done |
+| 4. FastAPI + agent | REST + SSE chat, golden prompts | ⏳ Next |
 | 5. Frontend | Map, timeline, chat drawer | ⬜ Planned |
 | 6. Cloud deployment | Terraform + CI/CD → public demo URL | ⬜ Planned |
 

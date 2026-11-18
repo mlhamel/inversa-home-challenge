@@ -35,6 +35,7 @@ Before considering any task or phase complete, you MUST run and pass:
 Follow `specs/README.md` Section 2 sequentially (`Phase 1` -> `Phase 6`). After completing each phase:
 1. Run `make verify` and fix all lint, type, or test failures.
 2. Summarize what was built and any tradeoffs made before moving to the next phase.
+3. Update the root `README.md` "Build status" table in the same PR: completed phase → ✅ Done, next phase → ⏳ Next. Never land (or close out) a phase while the table is stale.
 
 ## 6. Git & PR Workflow
 All changes land on `main` through squash-merged PRs created with `gh`. The agent opens PRs but **never merges** — the user owns the merge button (see step 5). Work strictly **one step at a time**: one phase or sub-step per session — never batch multiple phases into a single branch, PR, or session — and stop for review after each completed step.
