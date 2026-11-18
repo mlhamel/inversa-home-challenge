@@ -146,5 +146,12 @@ jobs:
           rm -f infra/tfplan
 
       - name: refresh datalake once
-        if: ${{ secrets.FIRMS_MAP_KEY != '' && secrets.OPENAQ_API_KEY != '' }}
-        run: gcloud run jobs execute ingestion-job --region "$REGION" --wait
+        env:
+          FIRMS_MAP_KEY: ${{ secrets.FIRMS_MAP_KEY }}
+          OPENAQ_API_KEY: ${{ secrets.OPENAQ_API_KEY }}
+        run: |
+          if [ -z "$FIRMS_MAP_KEY" ] || [ -z "$OPENAQ_API_KEY" ]; then
+            echo "skipping one-shot ingestion (FIRMS_MAP_KEY / OPENAQ_API_KEY secrets not configured)"
+          else
+            gcloud run jobs execute ingestion-job --region "$REGION" --wait
+          fi
