@@ -79,6 +79,15 @@ def test_tools_call_roundtrip_returns_structured_envelope(http_app: TestClient) 
     assert payload["evidence_refs"]["bbox_focus"] == [-122.0, 37.0, -122.0, 37.5]
 
 
+def test_health_reports_liveness(api_settings: Settings) -> None:
+    """GET /health answers ok without entering the analytical lifespan."""
+    client = TestClient(create_app(api_settings))
+    response = client.get("/health")
+    client.close()
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+
+
 def _session_id(client: TestClient) -> str:
     """initialize on the mount, send the initialized notification, return the session."""
     response = client.post(
