@@ -1,3 +1,4 @@
+"""HTTP transport helpers: retry with backoff and rate-limit-aware pacing."""
 from __future__ import annotations
 
 import asyncio
@@ -18,10 +19,12 @@ RATE_LIMIT_HEADERS: Final[tuple[str, ...]] = ("Retry-After", "x-ratelimit-reset"
 
 
 async def sleep_for(seconds: float) -> None:
+    """Async sleep indirection that tests can stub."""
     await asyncio.sleep(seconds)
 
 
 class Pacer:
+    """Async rate limiter holding a minimum interval between requests."""
     def __init__(self, min_interval: float, *, clock: Callable[[], float] | None = None) -> None:
         self._min_interval = min_interval
         self._clock: Callable[[], float] = time.monotonic if clock is None else clock
@@ -29,6 +32,7 @@ class Pacer:
         self._lock = asyncio.Lock()
 
     async def acquire(self) -> None:
+        """Reserve the next request slot, sleeping until it opens."""
         if self._min_interval <= 0.0:
             return
         async with self._lock:
@@ -48,6 +52,7 @@ async def get_with_retry(
     request_timeout: float | httpx.Timeout = 60.0,
     pacer: Pacer | None = None,
 ) -> httpx.Response:
+    """GET with bounded retries on 429/5xx and transport errors, honoring rate-limit hints."""
     for attempt in range(1, MAX_ATTEMPTS + 1):
         last_response: httpx.Response | None = None
         try:
