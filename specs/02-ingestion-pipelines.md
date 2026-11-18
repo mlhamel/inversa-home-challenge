@@ -17,7 +17,7 @@ Each collector follows a strict three-step boundary pipeline:
 # 3. Collector Specifications (`services/ingestion/src/ingestion/`)
 
 ## 3.1 `fetch_firms.py` (NASA FIRMS)
-- **Endpoint:** `https://firms.modaps.eosdis.nasa.gov/api/area/csv/${FIRMS_MAP_KEY}/VIIRS_SNPP_NRT/${BBOX}/1`
+- **Endpoint:** `https://firms.modaps.eosdis.nasa.gov/api/area/csv/${FIRMS_MAP_KEY}/VIIRS_NOAA20_NRT/${BBOX}/1`
 - **Schedule:** Every 30 minutes via Cloud Scheduler.
 - **Polars Logic:**
   1. Parse CSV response via `pl.read_csv()`.

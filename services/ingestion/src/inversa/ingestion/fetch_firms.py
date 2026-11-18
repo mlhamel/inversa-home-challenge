@@ -96,7 +96,7 @@ def _url(settings: Settings, day_range: int, end_date: date | None) -> str:
     if not 1 <= day_range <= MAX_DAY_RANGE:
         msg = f"FIRMS day_range must be within [1..{MAX_DAY_RANGE}], got {day_range}"
         raise CollectorError(msg)
-    base = f"{BASE_URL}/{settings.firms_map_key}/VIIRS_SNPP_NRT/{settings.bbox_str}/{day_range}"
+    base = f"{BASE_URL}/{settings.firms_map_key}/VIIRS_NOAA20_NRT/{settings.bbox_str}/{day_range}"
     return f"{base}/{end_date.isoformat()}" if end_date is not None else base
 
 
