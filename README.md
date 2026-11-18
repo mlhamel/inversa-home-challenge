@@ -52,7 +52,8 @@ Phased build per [`specs/README.md` §2](specs/README.md) — one phase per PR:
 | Phase | Scope | Status |
 | --- | --- | --- |
 | 1. Contracts | `packages/proto` + `packages/shared-schemas`, buf codegen | ✅ Done |
-| 2. Ingestion & local datalake | `services/ingestion`, 7-day backfill | ✅ Done |
+| 2. Ingestion & local datalake | `services/ingestion` collector code (FIRMS, OpenAQ, Open-Meteo) | ✅ Done |
+| 2b. Data scrape (backfill) | `make backfill` real-API run into `${DATA_DIR}` (spec-02 §4 + spec-10) | ⚠️ Partial: air quality + weather scraped, no `fires/` yet |
 | 3. DuckDB + FastMCP | `services/api` engine + `/mcp` | ✅ Done |
 | 4. FastAPI + agent | REST + SSE chat, golden prompts | ⏳ Next |
 | 5. Frontend | Map, timeline, chat drawer | ⬜ Planned |
