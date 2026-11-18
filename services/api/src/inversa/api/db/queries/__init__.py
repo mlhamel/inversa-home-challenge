@@ -18,6 +18,7 @@ from pydantic import BaseModel, ConfigDict
 DEFAULT_RADIUS_KM: float = 150.0
 DEFAULT_CONE_HALF_ANGLE: float = 25.0
 DEFAULT_EVENT_LIMIT: int = 5
+SNAPSHOT_FIRE_WINDOW_HOURS: int = 4
 
 
 class AnalyzeMatch(BaseModel):
@@ -88,6 +89,58 @@ class WorstEventRow(BaseModel):
     stale_outlier_excluded: int
 
 
+class SnapshotFireRow(BaseModel):
+    """One FIRMS active-fire detection inside the snapshot's trailing 4 h window."""
+
+    model_config = ConfigDict(frozen=True)
+
+    fire_id: str
+    observed_at: datetime
+    lat: float
+    lon: float
+    frp: float | None
+    confidence: str
+    satellite: str
+
+
+class SnapshotStationRow(BaseModel):
+    """One OpenAQ station's latest reading at/before the target instant."""
+
+    model_config = ConfigDict(frozen=True)
+
+    station_id: str
+    station_name: str
+    lat: float
+    lon: float
+    pm25: float | None
+    quality_flag: str
+    observed_at: datetime
+
+
+class SnapshotWindRow(BaseModel):
+    """One Open-Meteo grid point's latest wind vector and boundary-layer height."""
+
+    model_config = ConfigDict(frozen=True)
+
+    grid_id: str
+    observed_at: datetime
+    lat: float
+    lon: float
+    wind_speed_10m: float | None
+    wind_direction_10m: float | None
+    boundary_layer_height: float | None
+
+
+class Snapshot(BaseModel):
+    """The three map layers rendered at one instant (spec-05 section 1)."""
+
+    model_config = ConfigDict(frozen=True)
+
+    fires: list[SnapshotFireRow]
+    stations: list[SnapshotStationRow]
+    wind: list[SnapshotWindRow]
+
+
 class EvidenceCoords(BaseModel):
     """Resolved coordinates for the ids referenced by an envelope's evidence refs."""
 
@@ -154,6 +207,52 @@ def run_timeline_summary(
         )
         for row in rows
     ]
+
+
+def run_snapshot(
+    cursor: duckdb.DuckDBPyConnection,
+    *,
+    target_ts: datetime,
+    fire_window_hours: int = SNAPSHOT_FIRE_WINDOW_HOURS,
+) -> Snapshot:
+    """Return the spec-05 map state at one instant: trailing fires, latest stations, wind."""
+    fires = [
+        SnapshotFireRow(
+            fire_id=row[0],
+            observed_at=row[1],
+            lat=row[2],
+            lon=row[3],
+            frp=row[4],
+            confidence=row[5],
+            satellite=row[6],
+        )
+        for row in _fetch(cursor, _load_sql("snapshot_fires.sql"), {"target_ts": target_ts})
+    ]
+    stations = [
+        SnapshotStationRow(
+            station_id=row[0],
+            station_name=row[1],
+            lat=row[2],
+            lon=row[3],
+            pm25=row[4],
+            quality_flag=row[5],
+            observed_at=row[6],
+        )
+        for row in _fetch(cursor, _load_sql("snapshot_stations.sql"), {"target_ts": target_ts})
+    ]
+    wind = [
+        SnapshotWindRow(
+            grid_id=row[0],
+            observed_at=row[1],
+            lat=row[2],
+            lon=row[3],
+            wind_speed_10m=row[4],
+            wind_direction_10m=row[5],
+            boundary_layer_height=row[6],
+        )
+        for row in _fetch(cursor, _load_sql("snapshot_wind.sql"), {"target_ts": target_ts})
+    ]
+    return Snapshot(fires=fires, stations=stations, wind=wind)
 
 
 def run_station_timeseries(
