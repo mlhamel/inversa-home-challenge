@@ -5,13 +5,12 @@ from typing import Final
 
 import httpx
 import polars as pl
+from inversa.ingestion.config import Settings
+from inversa.ingestion.contract import WEATHER_SCHEMA, wind_rows
+from inversa.ingestion.http_retry import get_with_retry
+from inversa.ingestion.result import CollectorError, CollectorResult
+from inversa.ingestion.validate import ValidationError, grid_point, wind_vector
 from inversa.v1 import telemetry_pb2 as telemetry
-
-from ingestion.config import Settings
-from ingestion.contract import WEATHER_SCHEMA, wind_rows
-from ingestion.http_retry import get_with_retry
-from ingestion.result import CollectorError, CollectorResult
-from ingestion.validate import ValidationError, grid_point, wind_vector
 
 BASE_URL: Final = "https://api.open-meteo.com/v1/forecast"
 HOURLY_VARIABLES: Final = "wind_speed_10m,wind_direction_10m,boundary_layer_height"

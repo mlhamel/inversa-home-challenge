@@ -17,4 +17,4 @@ dependencies = [
 inversa-schemas = { workspace = true }
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/ingestion"]
+packages = ["src/inversa"]

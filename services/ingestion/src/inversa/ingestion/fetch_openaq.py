@@ -7,13 +7,12 @@ from typing import Final
 
 import httpx
 import polars as pl
+from inversa.ingestion.config import Settings
+from inversa.ingestion.contract import AIR_QUALITY_SCHEMA, air_quality_rows
+from inversa.ingestion.http_retry import Pacer, get_with_retry
+from inversa.ingestion.result import CollectorError, CollectorResult
+from inversa.ingestion.validate import air_quality
 from inversa.v1 import telemetry_pb2 as telemetry
-
-from ingestion.config import Settings
-from ingestion.contract import AIR_QUALITY_SCHEMA, air_quality_rows
-from ingestion.http_retry import Pacer, get_with_retry
-from ingestion.result import CollectorError, CollectorResult
-from ingestion.validate import air_quality
 
 BASE_URL: Final = "https://api.openaq.org/v3"
 PM25_PARAMETER_ID: Final[int] = 2

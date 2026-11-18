@@ -26,7 +26,7 @@ Before considering any task or phase complete, you MUST run and pass:
 - `make verify` — Runs `protolint`, `prek` / `ruff`, `mypy --strict`, and `pytest`.
 
 ## 4. Coding Standards
-- **Python (`3.12+`):** Managed with `uv` workspaces. Full type annotations required (`mypy --strict` must pass). Use `Polars` (never `Pandas`) for ingestion transformations and `httpx.AsyncClient` for external API calls.
+- **Python (`3.12+`):** Managed with `uv` workspaces. Full type annotations required (`mypy --strict` must pass). Use `Polars` (never `Pandas`) for ingestion transformations and `httpx.AsyncClient` for external API calls. All Python code lives under the `inversa` PEP 420 namespace: packages are `inversa.<service>.*` (e.g. `inversa.ingestion`), never a bare top-level `<service>` package, and `src/inversa/` must not contain an `__init__.py` (so `inversa.v1` from generated proto bindings merges into the same namespace).
 - **SQL (`DuckDB`):** Parameterize all dynamic inputs (`$target_ts`, `$radius_km`). Keep spatial calculations (`ST_Azimuth`, `ST_Distance_Spheroid`, `ASOF JOIN`) inside `services/api/src/db/queries/`.
 - **TypeScript (`Next.js` App Router):** Strict TypeScript (`noImplicitAny`). Consume generated types from `apps/web/src/generated/inversa/v1/`.
 

@@ -7,11 +7,11 @@ from typing import Any, Final
 import httpx
 import polars as pl
 import pytest
-from ingestion import fetch_open_meteo
-from ingestion.config import Settings
-from ingestion.contract import WEATHER_SCHEMA
-from ingestion.result import CollectorError
-from ingestion.validate import grid_id
+from inversa.ingestion import fetch_open_meteo
+from inversa.ingestion.config import Settings
+from inversa.ingestion.contract import WEATHER_SCHEMA
+from inversa.ingestion.result import CollectorError
+from inversa.ingestion.validate import grid_id
 from samples import (
     METEO_DIRECTIONS,
     METEO_HEIGHTS,

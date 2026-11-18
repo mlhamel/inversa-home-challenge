@@ -6,13 +6,12 @@ from typing import Final
 
 import httpx
 import polars as pl
+from inversa.ingestion.config import Settings
+from inversa.ingestion.contract import FIRES_SCHEMA, fire_rows
+from inversa.ingestion.http_retry import get_with_retry
+from inversa.ingestion.result import CollectorError, CollectorResult
+from inversa.ingestion.validate import ValidationError, detect_fire
 from inversa.v1 import telemetry_pb2 as telemetry
-
-from ingestion.config import Settings
-from ingestion.contract import FIRES_SCHEMA, fire_rows
-from ingestion.http_retry import get_with_retry
-from ingestion.result import CollectorError, CollectorResult
-from ingestion.validate import ValidationError, detect_fire
 
 BASE_URL: Final = "https://firms.modaps.eosdis.nasa.gov/api/area/csv"
 MAX_DAY_RANGE: Final[int] = 5
