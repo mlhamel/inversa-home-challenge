@@ -116,10 +116,10 @@ def test_detect_fire_confidence_symbols(symbol: str, expected: int) -> None:
 
 
 def test_detect_fire_passthroughs() -> None:
-    detection = _fire(satellite="  VIIRS_SNPP_NRT ")
+    detection = _fire(satellite="  N20 ")
     assert detection.frp == pytest.approx(8.4)
     assert detection.lat == pytest.approx(38.5816)
-    assert detection.satellite == "VIIRS_SNPP_NRT"
+    assert detection.satellite == "N20"
     stamp = detection.observed_at.ToDatetime().replace(microsecond=0).isoformat()
     assert stamp == "2026-11-17T16:30:00"
 
@@ -215,7 +215,7 @@ def _fire(**overrides: Any) -> telemetry.FireDetection:
         "lon": -121.4944,
         "frp": 8.4,
         "confidence_symbol": "h",
-        "satellite": "VIIRS_SNPP_NRT",
+        "satellite": "N20",
     }
     kwargs.update(overrides)
     return detect_fire(**kwargs)
