@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 
 import httpx
@@ -46,6 +47,34 @@ async def test_get_with_retry_honors_retry_after_header(
         await get_with_retry(client, "https://api.test/locations")
 
     assert slept == [3.0]
+
+
+async def test_get_with_retry_logs_warning_per_attempt(
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    async def _noop_sleep(_seconds: float) -> None:
+        return None
+
+    monkeypatch.setattr(http_retry, "sleep_for", _noop_sleep)
+    captured: list[httpx.Request] = []
+    script: list[httpx.Response | BaseException] = [
+        httpx.Response(500),
+        httpx.Response(429, headers={"Retry-After": "2"}),
+        httpx.Response(200),
+    ]
+    async with _client(script, captured) as client:
+        response = await get_with_retry(client, "https://api.test/locations")
+
+    assert response.status_code == 200
+    warns = [
+        record.message
+        for record in caplog.records
+        if record.levelno == logging.WARNING and record.name == "inversa.ingestion.http_retry"
+    ]
+    assert len(warns) == 2
+    assert warns[0].startswith("api.test: attempt 1/4 failed (HTTP 500), retrying in 0.")
+    assert warns[1] == "api.test: attempt 2/4 failed (HTTP 429), retrying in 2.0s"
 
 
 async def test_get_with_retry_raises_immediately_on_client_error(
@@ -186,9 +215,7 @@ async def test_get_with_retry_discards_stale_rate_limit_hint(
     captured: list[httpx.Request] = []
     script: list[httpx.Response | BaseException] = [
         httpx.Response(429, headers={"x-ratelimit-reset": "30"}),
-        httpx.ConnectError(
-            "boom", request=httpx.Request("GET", "https://api.test/locations")
-        ),
+        httpx.ConnectError("boom", request=httpx.Request("GET", "https://api.test/locations")),
         httpx.Response(200),
     ]
     async with _client(script, captured) as client:
