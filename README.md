@@ -31,7 +31,7 @@ A map + timeline interface driven by a natural-language agent:
 - **Mounted FastMCP server.** Analytical tools and data-freshness resources are exposed via FastMCP at `/mcp` inside the FastAPI app; every tool returns an `McpToolEnvelope` carrying `evidence_refs` for UI grounding.
 - **API & agent.** FastAPI serves snapshot/timeline REST endpoints plus an SSE `/api/chat` gateway backed by PydanticAI.
 - **Frontend.** Next.js (App Router) with MapLibre GL JS / Deck.gl for the 60fps map and timeline canvas, consuming the generated TypeScript types.
-- **Infrastructure.** Terraform-provisioned GCS + Cloud Run (Service + Job) + Cloud Scheduler, deployed by GitHub Actions.
+- **Infrastructure.** Terraform-provisioned GCS + Cloud Run (Service + Job) + Cloud Scheduler, deployed by GitHub Actions. Deploys push new service images and run Terraform; they do not trigger an ingestion run — the lake refreshes at the next scheduled tick (within 2 h).
 
 ## Repository map
 

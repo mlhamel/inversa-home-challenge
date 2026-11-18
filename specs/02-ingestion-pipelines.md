@@ -18,7 +18,7 @@ Each collector follows a strict three-step boundary pipeline:
 
 ## 3.1 `fetch_firms.py` (NASA FIRMS)
 - **Endpoint:** `https://firms.modaps.eosdis.nasa.gov/api/area/csv/${FIRMS_MAP_KEY}/VIIRS_NOAA20_NRT/${BBOX}/1`
-- **Schedule:** Every 30 minutes via Cloud Scheduler.
+- **Schedule:** Every 2 hours via Cloud Scheduler (`0 */2 * * *`).
 - **Polars Logic:**
   1. Parse CSV response via `pl.read_csv()`.
   2. Combine `acq_date` and zero-padded 4-digit `acq_time` (`HHMM`) into UTC `observed_at`.

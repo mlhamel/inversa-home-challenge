@@ -14,7 +14,6 @@ concurrency:
 
 env:
   PROJECT_ID: inversa-home-challenge
-  REGION: northamerica-northeast1
   REGISTRY: northamerica-northeast1-docker.pkg.dev
 
 jobs:
@@ -59,7 +58,7 @@ jobs:
   deploy:
     needs: verify
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 30
     permissions:
       contents: read
       id-token: write
@@ -146,14 +145,3 @@ jobs:
           terraform -chdir=infra plan -input=false -no-color -out=tfplan
           terraform -chdir=infra apply -input=false -auto-approve tfplan
           rm -f infra/tfplan
-
-      - name: refresh datalake once
-        env:
-          FIRMS_MAP_KEY: ${{ secrets.FIRMS_MAP_KEY }}
-          OPENAQ_API_KEY: ${{ secrets.OPENAQ_API_KEY }}
-        run: |
-          if [ -z "$FIRMS_MAP_KEY" ] || [ -z "$OPENAQ_API_KEY" ]; then
-            echo "skipping one-shot ingestion (FIRMS_MAP_KEY / OPENAQ_API_KEY secrets not configured)"
-          else
-            gcloud run jobs execute ingestion-job --region "$REGION" --wait
-          fi
