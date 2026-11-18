@@ -120,6 +120,11 @@ resource "google_cloud_run_v2_service" "web_api" {
         value = var.agent_model
       }
 
+      env {
+        name  = "AGENT_BASE_URL"
+        value = var.agent_base_url
+      }
+
       dynamic "env" {
         for_each = {
           for name, m in local.secret_meta_enabled : m.env_key => name
