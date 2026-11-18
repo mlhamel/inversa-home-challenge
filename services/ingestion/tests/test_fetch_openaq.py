@@ -20,25 +20,6 @@ from samples import (
 )
 
 
-def _station() -> fetch_openaq.Station:
-    return fetch_openaq.Station(
-        id="2009", name="San Francisco", lat=37.7658, lon=-122.3978, sensor_id="3569"
-    )
-
-
-def _json_handler(
-    captured: list[httpx.Request], routes: dict[str, Any]
-) -> Callable[[httpx.Request], httpx.Response]:
-    def handler(request: httpx.Request) -> httpx.Response:
-        captured.append(request)
-        for suffix, payload in routes.items():
-            if request.url.path.endswith(suffix):
-                return httpx.Response(200, json=payload)
-        raise AssertionError(f"unexpected route: {request.url.path}")
-
-    return handler
-
-
 async def test_collect_stations_discovers_pm25_sensor(settings: Settings) -> None:
     captured: list[httpx.Request] = []
     routes = {"/v3/locations": {"results": [openaq_location()]}}
@@ -291,3 +272,22 @@ async def test_collect_sensor_hours_rejects_non_numeric_value(
 
     assert result.rejected == 1
     assert result.df.height == 0
+
+
+def _station() -> fetch_openaq.Station:
+    return fetch_openaq.Station(
+        id="2009", name="San Francisco", lat=37.7658, lon=-122.3978, sensor_id="3569"
+    )
+
+
+def _json_handler(
+    captured: list[httpx.Request], routes: dict[str, Any]
+) -> Callable[[httpx.Request], httpx.Response]:
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured.append(request)
+        for suffix, payload in routes.items():
+            if request.url.path.endswith(suffix):
+                return httpx.Response(200, json=payload)
+        raise AssertionError(f"unexpected route: {request.url.path}")
+
+    return handler

@@ -18,38 +18,6 @@ from inversa.v1 import telemetry_pb2 as telemetry
 from samples import RUN_AT
 
 
-def _observed(lag: timedelta) -> datetime:
-    return RUN_AT - lag
-
-
-def _fire(**overrides: Any) -> telemetry.FireDetection:
-    kwargs: dict[str, Any] = {
-        "observed_at": _observed(timedelta(minutes=90)),
-        "ingested_at": RUN_AT,
-        "lat": 38.5816,
-        "lon": -121.4944,
-        "frp": 8.4,
-        "confidence_symbol": "h",
-        "satellite": "VIIRS_SNPP_NRT",
-    }
-    kwargs.update(overrides)
-    return detect_fire(**kwargs)
-
-
-def _reading(**overrides: Any) -> telemetry.AirQualityReading:
-    kwargs: dict[str, Any] = {
-        "observed_at": _observed(timedelta(hours=1)),
-        "ingested_at": RUN_AT,
-        "station_id": "2009",
-        "station_name": "San Francisco",
-        "lat": 37.7658,
-        "lon": -122.3978,
-        "pm25": 9.0,
-    }
-    kwargs.update(overrides)
-    return air_quality(**kwargs)
-
-
 def test_quality_flag_valid_within_two_hours() -> None:
     assert quality_flag(
         ingested_at=RUN_AT, observed_at=_observed(timedelta(hours=1)), pm25=9.0
@@ -233,3 +201,35 @@ def test_wind_vector_rejects_physics_bounds(overrides: dict[str, float]) -> None
     kwargs.update(overrides)
     with pytest.raises(ValidationError, match="physical bounds"):
         wind_vector(**kwargs)
+
+
+def _observed(lag: timedelta) -> datetime:
+    return RUN_AT - lag
+
+
+def _fire(**overrides: Any) -> telemetry.FireDetection:
+    kwargs: dict[str, Any] = {
+        "observed_at": _observed(timedelta(minutes=90)),
+        "ingested_at": RUN_AT,
+        "lat": 38.5816,
+        "lon": -121.4944,
+        "frp": 8.4,
+        "confidence_symbol": "h",
+        "satellite": "VIIRS_SNPP_NRT",
+    }
+    kwargs.update(overrides)
+    return detect_fire(**kwargs)
+
+
+def _reading(**overrides: Any) -> telemetry.AirQualityReading:
+    kwargs: dict[str, Any] = {
+        "observed_at": _observed(timedelta(hours=1)),
+        "ingested_at": RUN_AT,
+        "station_id": "2009",
+        "station_name": "San Francisco",
+        "lat": 37.7658,
+        "lon": -122.3978,
+        "pm25": 9.0,
+    }
+    kwargs.update(overrides)
+    return air_quality(**kwargs)
