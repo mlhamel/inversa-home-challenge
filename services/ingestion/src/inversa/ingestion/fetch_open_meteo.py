@@ -1,3 +1,4 @@
+"""Open-Meteo historical-forecast wind and boundary-layer collector."""
 from __future__ import annotations
 
 from datetime import UTC, datetime
@@ -5,26 +6,22 @@ from typing import Final
 
 import httpx
 import polars as pl
+from inversa.ingestion.config import Settings
+from inversa.ingestion.contract import WEATHER_SCHEMA, wind_rows
+from inversa.ingestion.http_retry import get_with_retry
+from inversa.ingestion.result import CollectorError, CollectorResult
+from inversa.ingestion.validate import ValidationError, grid_point, wind_vector
 from inversa.v1 import telemetry_pb2 as telemetry
-
-from ingestion.config import Settings
-from ingestion.contract import WEATHER_SCHEMA, wind_rows
-from ingestion.http_retry import get_with_retry
-from ingestion.result import CollectorError, CollectorResult
-from ingestion.validate import ValidationError, grid_point, wind_vector
 
 BASE_URL: Final = "https://api.open-meteo.com/v1/forecast"
 HOURLY_VARIABLES: Final = "wind_speed_10m,wind_direction_10m,boundary_layer_height"
 
+
 Point = tuple[float, float]
 
 
-def _rounded(point: Point) -> Point:
-    lat, lon = grid_point(point[0], point[1])
-    return (float(lat), float(lon))
-
-
 def points_from_frames(*frames: pl.DataFrame | None) -> list[Point]:
+    """Collect rounded, deduplicated grid points from fire and air-quality frames."""
     points: set[Point] = set()
     for frame in frames:
         if frame is None or frame.height == 0:
@@ -47,6 +44,7 @@ async def collect(
     past_days: int = 1,
     forecast_days: int = 1,
 ) -> CollectorResult:
+    """Fetch hourly wind variables for grid points over a UTC time window."""
     if not points:
         return CollectorResult(df=pl.DataFrame(schema=WEATHER_SCHEMA), rejected=0)
     rounded = [_rounded(point) for point in points]
@@ -100,3 +98,8 @@ async def collect(
             except ValidationError:
                 rejected += 1
     return CollectorResult(df=wind_rows(rows), rejected=rejected)
+
+
+def _rounded(point: Point) -> Point:
+    lat, lon = grid_point(point[0], point[1])
+    return (float(lat), float(lon))

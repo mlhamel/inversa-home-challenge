@@ -1,11 +1,10 @@
+"""Proto telemetry builders with contract and plausibility checks."""
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 from typing import Final
 
-from inversa.v1 import telemetry_pb2 as telemetry
-
-from ingestion.contract import (
+from inversa.ingestion.contract import (
     fire_confidence_token,
     fire_id,
     hash16,
@@ -13,40 +12,23 @@ from ingestion.contract import (
     quality_flag_token,
     stamp,
 )
+from inversa.v1 import telemetry_pb2 as telemetry
 
 
 class ValidationError(ValueError):
-    pass
+    """Raised when data fails contract or plausibility validation."""
 
 
 STALE_AFTER: Final[timedelta] = timedelta(hours=2)
 PM25_MIN: Final[float] = 0.0
 PM25_MAX: Final[float] = 1500.0
 
-_CONFIDENCE_BY_SYMBOL: Final[dict[str, telemetry.FireConfidence]] = {
-    "h": telemetry.FIRE_CONFIDENCE_HIGH,
-    "high": telemetry.FIRE_CONFIDENCE_HIGH,
-    "n": telemetry.FIRE_CONFIDENCE_NOMINAL,
-    "nominal": telemetry.FIRE_CONFIDENCE_NOMINAL,
-    "l": telemetry.FIRE_CONFIDENCE_LOW,
-    "low": telemetry.FIRE_CONFIDENCE_LOW,
-}
 
 GRID_DEGREE: Final[float] = 0.25
 
 
-def _require_timestamps(ingested_at: datetime, observed_at: datetime, label: str) -> None:
-    if observed_at.tzinfo is None or ingested_at.tzinfo is None:
-        raise ValidationError(f"{label}: timestamps must be timezone-aware UTC")
-
-
-def _require_finite(value: float, label: str) -> float:
-    if value != value or value in (float("inf"), float("-inf")):
-        raise ValidationError(f"{label}: value must be finite, got {value!r}")
-    return value
-
-
 def fire_confidence_from_symbol(symbol: str) -> telemetry.FireConfidence:
+    """Map a FIRMS confidence symbol to the FireConfidence enum."""
     token = symbol.strip().lower()
     flagged = _CONFIDENCE_BY_SYMBOL.get(token)
     if flagged is None:
@@ -64,6 +46,7 @@ def detect_fire(
     confidence_symbol: str,
     satellite: str,
 ) -> telemetry.FireDetection:
+    """Validate one FIRMS row and build a FireDetection proto."""
     _require_timestamps(ingested_at, observed_at, "FireDetection")
     if not -90.0 <= lat <= 90.0 or not -180.0 <= lon <= 180.0:
         raise ValidationError(f"FireDetection: coordinates ({lat}, {lon}) out of bounds")
@@ -86,6 +69,7 @@ def detect_fire(
 def quality_flag(
     *, ingested_at: datetime, observed_at: datetime, pm25: float | None
 ) -> tuple[telemetry.QualityFlag, float | None]:
+    """Classify a PM2.5 reading as valid, outlier, or stale."""
     if pm25 is None:
         return telemetry.QUALITY_FLAG_STALE, None
     _require_finite(pm25, "AirQualityReading.pm25")
@@ -106,6 +90,7 @@ def air_quality(
     lon: float,
     pm25: float | None,
 ) -> telemetry.AirQualityReading:
+    """Validate one station reading and build an AirQualityReading proto."""
     _require_timestamps(ingested_at, observed_at, "AirQualityReading")
     if not station_id.strip():
         raise ValidationError("AirQualityReading: station_id must be a non-empty string")
@@ -126,10 +111,12 @@ def air_quality(
 
 
 def grid_point(lat: float, lon: float) -> tuple[float, float]:
+    """Snap coordinates onto the 0.25-degree analysis grid."""
     return round(lat / GRID_DEGREE) * GRID_DEGREE, round(lon / GRID_DEGREE) * GRID_DEGREE
 
 
 def grid_id(lat: float, lon: float) -> str:
+    """Hashed wind-grid cell ID from snapped coordinates."""
     rounded_lat, rounded_lon = grid_point(lat, lon)
     return hash16(f"{rounded_lat:.2f}_{rounded_lon:.2f}")
 
@@ -144,6 +131,7 @@ def wind_vector(
     wind_direction_10m: float,
     boundary_layer_height: float | None,
 ) -> telemetry.WindVector:
+    """Validate meteorological values and build a WindVector proto."""
     _require_timestamps(ingested_at, observed_at, "WindVector")
     if not -90.0 <= lat <= 90.0 or not -180.0 <= lon <= 180.0:
         raise ValidationError(f"WindVector: coordinates ({lat}, {lon}) out of bounds")
@@ -166,3 +154,24 @@ def wind_vector(
         vector.boundary_layer_height = max(0.0, boundary)
     vector.grid_id = grid_id(lat, lon)
     return vector
+
+
+_CONFIDENCE_BY_SYMBOL: Final[dict[str, telemetry.FireConfidence]] = {
+    "h": telemetry.FIRE_CONFIDENCE_HIGH,
+    "high": telemetry.FIRE_CONFIDENCE_HIGH,
+    "n": telemetry.FIRE_CONFIDENCE_NOMINAL,
+    "nominal": telemetry.FIRE_CONFIDENCE_NOMINAL,
+    "l": telemetry.FIRE_CONFIDENCE_LOW,
+    "low": telemetry.FIRE_CONFIDENCE_LOW,
+}
+
+
+def _require_timestamps(ingested_at: datetime, observed_at: datetime, label: str) -> None:
+    if observed_at.tzinfo is None or ingested_at.tzinfo is None:
+        raise ValidationError(f"{label}: timestamps must be timezone-aware UTC")
+
+
+def _require_finite(value: float, label: str) -> float:
+    if value != value or value in (float("inf"), float("-inf")):
+        raise ValidationError(f"{label}: value must be finite, got {value!r}")
+    return value

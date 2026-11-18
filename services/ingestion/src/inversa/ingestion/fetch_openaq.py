@@ -1,19 +1,19 @@
+"""OpenAQ v3 air-quality collector: bbox stations and PM2.5 readings."""
 from __future__ import annotations
 
 import asyncio
-from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Final
 
 import httpx
 import polars as pl
+from inversa.ingestion.config import Settings
+from inversa.ingestion.contract import AIR_QUALITY_SCHEMA, air_quality_rows
+from inversa.ingestion.http_retry import Pacer, get_with_retry
+from inversa.ingestion.result import CollectorError, CollectorResult
+from inversa.ingestion.validate import air_quality
 from inversa.v1 import telemetry_pb2 as telemetry
-
-from ingestion.config import Settings
-from ingestion.contract import AIR_QUALITY_SCHEMA, air_quality_rows
-from ingestion.http_retry import Pacer, get_with_retry
-from ingestion.result import CollectorError, CollectorResult
-from ingestion.validate import air_quality
+from pydantic import BaseModel, ConfigDict
 
 BASE_URL: Final = "https://api.openaq.org/v3"
 PM25_PARAMETER_ID: Final[int] = 2
@@ -24,55 +24,19 @@ MIN_REQUEST_INTERVAL_SECONDS: Final[float] = 1.1
 
 
 def openaq_pacer() -> Pacer:
+    """Default Pacer honoring the OpenAQ free-tier request interval."""
     return Pacer(MIN_REQUEST_INTERVAL_SECONDS)
 
 
-@dataclass(frozen=True)
-class Station:
+class Station(BaseModel):
+    """Frozen OpenAQ monitoring station with its PM2.5 sensor."""
+    model_config = ConfigDict(frozen=True)
+
     id: str
     name: str
     lat: float
     lon: float
     sensor_id: str
-
-
-def _headers(api_key: str | None) -> dict[str, str]:
-    if api_key is None:
-        raise CollectorError("OPENAQ_API_KEY is not configured")
-    return {"X-API-Key": api_key}
-
-
-def _station_from_location(location: dict[str, object]) -> Station | None:
-    identifier = location.get("id")
-    coordinates = location.get("coordinates") or {}
-    if not isinstance(identifier, int) or not isinstance(coordinates, dict):
-        return None
-    latitude = coordinates.get("latitude")
-    longitude = coordinates.get("longitude")
-    raw_sensors = location.get("sensors")
-    sensors = raw_sensors if isinstance(raw_sensors, list) else []
-    if not isinstance(latitude, int | float) or not isinstance(longitude, int | float):
-        return None
-    sensor_id = next(
-        (
-            sensor.get("id")
-            for sensor in sensors
-            if isinstance(sensor, dict)
-            and isinstance(sensor.get("parameter"), dict)
-            and sensor["parameter"].get("id") == PM25_PARAMETER_ID
-            and isinstance(sensor.get("id"), int)
-        ),
-        None,
-    )
-    if sensor_id is None:
-        return None
-    return Station(
-        id=str(identifier),
-        name=str(location.get("name") or ""),
-        lat=float(latitude),
-        lon=float(longitude),
-        sensor_id=str(sensor_id),
-    )
 
 
 async def collect_stations(
@@ -84,6 +48,7 @@ async def collect_stations(
     max_pages: int = MAX_PAGES,
     pacer: Pacer | None = None,
 ) -> list[Station]:
+    """Page all monitor-type PM2.5 locations inside the bbox."""
     stations: list[Station] = []
     for page in range(1, max_pages + 1):
         response = await get_with_retry(
@@ -112,33 +77,6 @@ async def collect_stations(
     return stations
 
 
-def _readings(
-    rows: list[telemetry.AirQualityReading], rejected_by_validation: int
-) -> CollectorResult:
-    return CollectorResult(df=air_quality_rows(rows), rejected=rejected_by_validation)
-
-
-def _parse_utc(stamp: dict[str, object]) -> datetime:
-    if not isinstance(stamp, dict):
-        raise ValueError(f"expected timestamp dict, got {type(stamp).__name__}")
-    utc_text = stamp.get("utc")
-    if not isinstance(utc_text, str) or not utc_text:
-        raise ValueError(f"missing utc timestamp: {utc_text!r}")
-    return datetime.fromisoformat(utc_text.replace("Z", "+00:00"))
-
-
-def _coerce_pm25(value: object) -> float | None:
-    if value is None:
-        return None
-    if not isinstance(value, int | float | str):
-        raise ValueError(f"value is not numeric: {value!r}")
-    return float(value)
-
-
-def _iso_utc(moment: datetime) -> str:
-    return moment.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
-
-
 async def collect(
     client: httpx.AsyncClient,
     settings: Settings,
@@ -146,6 +84,7 @@ async def collect(
     ingested_at: datetime,
     pacer: Pacer | None = None,
 ) -> CollectorResult:
+    """Fetch latest PM2.5 readings for every bbox station with bounded concurrency."""
     stations = await collect_stations(
         client, api_key=settings.openaq_api_key, bbox=settings.bbox_str, pacer=pacer
     )
@@ -207,6 +146,7 @@ async def collect_sensor_hours(
     ingested_at: datetime,
     pacer: Pacer | None = None,
 ) -> CollectorResult:
+    """Fetch hour-by-hour PM2.5 history for one sensor and time window."""
     rows: list[telemetry.AirQualityReading] = []
     rejected = 0
     for page in range(1, MAX_PAGES + 1):
@@ -249,3 +189,69 @@ async def collect_sensor_hours(
         if len(results) < PAGE_LIMIT:
             break
     return _readings(rows, rejected)
+
+
+def _headers(api_key: str | None) -> dict[str, str]:
+    if api_key is None:
+        raise CollectorError("OPENAQ_API_KEY is not configured")
+    return {"X-API-Key": api_key}
+
+
+def _station_from_location(location: dict[str, object]) -> Station | None:
+    identifier = location.get("id")
+    coordinates = location.get("coordinates") or {}
+    if not isinstance(identifier, int) or not isinstance(coordinates, dict):
+        return None
+    latitude = coordinates.get("latitude")
+    longitude = coordinates.get("longitude")
+    raw_sensors = location.get("sensors")
+    sensors = raw_sensors if isinstance(raw_sensors, list) else []
+    if not isinstance(latitude, int | float) or not isinstance(longitude, int | float):
+        return None
+    sensor_id = next(
+        (
+            sensor.get("id")
+            for sensor in sensors
+            if isinstance(sensor, dict)
+            and isinstance(sensor.get("parameter"), dict)
+            and sensor["parameter"].get("id") == PM25_PARAMETER_ID
+            and isinstance(sensor.get("id"), int)
+        ),
+        None,
+    )
+    if sensor_id is None:
+        return None
+    return Station(
+        id=str(identifier),
+        name=str(location.get("name") or ""),
+        lat=float(latitude),
+        lon=float(longitude),
+        sensor_id=str(sensor_id),
+    )
+
+
+def _readings(
+    rows: list[telemetry.AirQualityReading], rejected_by_validation: int
+) -> CollectorResult:
+    return CollectorResult(df=air_quality_rows(rows), rejected=rejected_by_validation)
+
+
+def _parse_utc(stamp: dict[str, object]) -> datetime:
+    if not isinstance(stamp, dict):
+        raise ValueError(f"expected timestamp dict, got {type(stamp).__name__}")
+    utc_text = stamp.get("utc")
+    if not isinstance(utc_text, str) or not utc_text:
+        raise ValueError(f"missing utc timestamp: {utc_text!r}")
+    return datetime.fromisoformat(utc_text.replace("Z", "+00:00"))
+
+
+def _coerce_pm25(value: object) -> float | None:
+    if value is None:
+        return None
+    if not isinstance(value, int | float | str):
+        raise ValueError(f"value is not numeric: {value!r}")
+    return float(value)
+
+
+def _iso_utc(moment: datetime) -> str:
+    return moment.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")

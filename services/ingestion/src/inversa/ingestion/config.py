@@ -1,17 +1,21 @@
+"""Environment-driven ingestion settings."""
 from __future__ import annotations
 
 import os
 from collections.abc import Mapping
-from dataclasses import dataclass
 from pathlib import Path
+
+from pydantic import BaseModel, ConfigDict
 
 
 class ConfigError(ValueError):
-    pass
+    """Raised when environment configuration is missing or malformed."""
 
 
-@dataclass(frozen=True)
-class Settings:
+class Settings(BaseModel):
+    """Frozen ingestion configuration parsed from the environment."""
+    model_config = ConfigDict(frozen=True)
+
     bbox: tuple[float, float, float, float]
     data_dir: Path
     firms_map_key: str | None
@@ -19,10 +23,12 @@ class Settings:
 
     @property
     def bbox_str(self) -> str:
+        """Return bbox as the comma-joined string FIRMS and OpenAQ query params expect."""
         return ",".join(str(value) for value in self.bbox)
 
 
 def load_settings(env: Mapping[str, str] | None = None) -> Settings:
+    """Build Settings from a mapping (defaults to os.environ)."""
     source = os.environ if env is None else env
     raw = source.get("BBOX", "")
     parts = raw.split(",")

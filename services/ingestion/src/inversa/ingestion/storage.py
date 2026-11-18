@@ -1,3 +1,4 @@
+"""Parquet datalake writes with a per-run ingestion log."""
 from __future__ import annotations
 
 from datetime import datetime
@@ -5,8 +6,7 @@ from pathlib import Path
 from typing import Final, NamedTuple
 
 import polars as pl
-
-from ingestion.contract import DATETIME
+from inversa.ingestion.contract import DATETIME
 
 LOG_SCHEMA: Final[pl.Schema] = pl.Schema({
     "source": pl.String(),
@@ -19,6 +19,7 @@ LOG_SCHEMA: Final[pl.Schema] = pl.Schema({
 
 
 class SourceSpec(NamedTuple):
+    """Parquet layout facts for one source: folder, file prefix, known latency."""
     folder: str
     prefix: str
     latency_minutes: int
@@ -29,6 +30,39 @@ SOURCE_SPECS: Final[dict[str, SourceSpec]] = {
     "openaq": SourceSpec(folder="air_quality", prefix="openaq", latency_minutes=15),
     "open_meteo": SourceSpec(folder="weather", prefix="meteo", latency_minutes=0),
 }
+
+
+def record_batch(
+    df: pl.DataFrame,
+    *,
+    root: Path,
+    source: str,
+    run_at: datetime,
+    rejected: int = 0,
+) -> list[Path]:
+    """Write date-partitioned Parquet and append the run log; return written paths."""
+    spec = SOURCE_SPECS[source]
+    paths: list[Path] = []
+    if df.height:
+        suffix = run_at.strftime("%H%M")
+        sliced = df.with_columns(_partition=pl.col("observed_at").dt.strftime("%Y-%m-%d"))
+        for date in sliced["_partition"].unique().sort():
+            part = sliced.filter(pl.col("_partition") == date).select(df.columns)
+            directory = root / spec.folder / f"date={date}"
+            directory.mkdir(parents=True, exist_ok=True)
+            path = directory / f"{spec.prefix}_{suffix}.parquet"
+            part.write_parquet(path, compression="zstd")
+            paths.append(path)
+    observed_max = df["observed_at"].max() if df.height else None
+    latest = observed_max if isinstance(observed_max, datetime) else None
+    status = "partial" if rejected else "success"
+    _append_log(root, source=source, run_at=run_at, records=df.height, latest=latest, status=status)
+    return paths
+
+
+def record_failure(root: Path, *, source: str, run_at: datetime) -> None:
+    """Append a failed-run log entry with zero records."""
+    _append_log(root, source=source, run_at=run_at, records=0, latest=None, status="failed")
 
 
 def _append_log(
@@ -55,34 +89,3 @@ def _append_log(
     table = row if not path.exists() else pl.read_parquet(path).vstack(row)
     path.parent.mkdir(parents=True, exist_ok=True)
     table.write_parquet(path, compression="zstd")
-
-
-def record_batch(
-    df: pl.DataFrame,
-    *,
-    root: Path,
-    source: str,
-    run_at: datetime,
-    rejected: int = 0,
-) -> list[Path]:
-    spec = SOURCE_SPECS[source]
-    paths: list[Path] = []
-    if df.height:
-        suffix = run_at.strftime("%H%M")
-        sliced = df.with_columns(_partition=pl.col("observed_at").dt.strftime("%Y-%m-%d"))
-        for date in sliced["_partition"].unique().sort():
-            part = sliced.filter(pl.col("_partition") == date).select(df.columns)
-            directory = root / spec.folder / f"date={date}"
-            directory.mkdir(parents=True, exist_ok=True)
-            path = directory / f"{spec.prefix}_{suffix}.parquet"
-            part.write_parquet(path, compression="zstd")
-            paths.append(path)
-    observed_max = df["observed_at"].max() if df.height else None
-    latest = observed_max if isinstance(observed_max, datetime) else None
-    status = "partial" if rejected else "success"
-    _append_log(root, source=source, run_at=run_at, records=df.height, latest=latest, status=status)
-    return paths
-
-
-def record_failure(root: Path, *, source: str, run_at: datetime) -> None:
-    _append_log(root, source=source, run_at=run_at, records=0, latest=None, status="failed")
