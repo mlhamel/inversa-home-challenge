@@ -10,6 +10,7 @@ dependencies = [
     "inversa-schemas",
     "polars>=1.30",
     "httpx>=0.28",
+    "pydantic>=2.7",
     "python-dotenv>=1.1",
 ]
 

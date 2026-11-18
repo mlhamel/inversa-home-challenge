@@ -32,6 +32,7 @@ python_version = "3.12"
 strict = true
 namespace_packages = true
 explicit_package_bases = true
+plugins = ["pydantic.mypy"]
 mypy_path = [
     "services/ingestion/src",
     "services/ingestion/tests",
