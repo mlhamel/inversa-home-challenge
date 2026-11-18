@@ -1,7 +1,9 @@
 """HTTP transport helpers: retry with backoff and rate-limit-aware pacing."""
+
 from __future__ import annotations
 
 import asyncio
+import logging
 import random
 import time
 from collections.abc import Callable
@@ -16,6 +18,7 @@ MAX_DELAY_SECONDS: Final[float] = 8.0
 RATE_LIMIT_MAX_SECONDS: Final[float] = 90.0
 RETRYABLE_STATUS: Final[frozenset[int]] = frozenset({429, 500, 502, 503, 504})
 RATE_LIMIT_HEADERS: Final[tuple[str, ...]] = ("Retry-After", "x-ratelimit-reset")
+logger: Final[logging.Logger] = logging.getLogger(__name__)
 
 
 async def sleep_for(seconds: float) -> None:
@@ -25,6 +28,7 @@ async def sleep_for(seconds: float) -> None:
 
 class Pacer:
     """Async rate limiter holding a minimum interval between requests."""
+
     def __init__(self, min_interval: float, *, clock: Callable[[], float] | None = None) -> None:
         self._min_interval = min_interval
         self._clock: Callable[[], float] = time.monotonic if clock is None else clock
@@ -66,12 +70,23 @@ async def get_with_retry(
             if exc.response.status_code not in RETRYABLE_STATUS or attempt == MAX_ATTEMPTS:
                 raise
             last_response = exc.response
-        except httpx.TransportError:
+            reason = f"HTTP {exc.response.status_code}"
+        except httpx.TransportError as exc:
             if attempt == MAX_ATTEMPTS:
                 raise
+            reason = f"transport {type(exc).__name__}"
         else:
             return response
-        await sleep_for(_delay_after_failure(last_response, attempt))
+        delay = _delay_after_failure(last_response, attempt)
+        logger.warning(
+            "%s: attempt %d/%d failed (%s), retrying in %.1fs",
+            httpx.URL(url).host,
+            attempt,
+            MAX_ATTEMPTS,
+            reason,
+            delay,
+        )
+        await sleep_for(delay)
     raise RuntimeError("get_with_retry exhausted attempts without returning a response")
 
 
