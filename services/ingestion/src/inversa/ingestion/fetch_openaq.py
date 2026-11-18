@@ -1,3 +1,4 @@
+"""OpenAQ v3 air-quality collector: bbox stations and PM2.5 readings."""
 from __future__ import annotations
 
 import asyncio
@@ -23,10 +24,12 @@ MIN_REQUEST_INTERVAL_SECONDS: Final[float] = 1.1
 
 
 def openaq_pacer() -> Pacer:
+    """Default Pacer honoring the OpenAQ free-tier request interval."""
     return Pacer(MIN_REQUEST_INTERVAL_SECONDS)
 
 
 class Station(BaseModel):
+    """Frozen OpenAQ monitoring station with its PM2.5 sensor."""
     model_config = ConfigDict(frozen=True)
 
     id: str
@@ -45,6 +48,7 @@ async def collect_stations(
     max_pages: int = MAX_PAGES,
     pacer: Pacer | None = None,
 ) -> list[Station]:
+    """Page all monitor-type PM2.5 locations inside the bbox."""
     stations: list[Station] = []
     for page in range(1, max_pages + 1):
         response = await get_with_retry(
@@ -80,6 +84,7 @@ async def collect(
     ingested_at: datetime,
     pacer: Pacer | None = None,
 ) -> CollectorResult:
+    """Fetch latest PM2.5 readings for every bbox station with bounded concurrency."""
     stations = await collect_stations(
         client, api_key=settings.openaq_api_key, bbox=settings.bbox_str, pacer=pacer
     )
@@ -141,6 +146,7 @@ async def collect_sensor_hours(
     ingested_at: datetime,
     pacer: Pacer | None = None,
 ) -> CollectorResult:
+    """Fetch hour-by-hour PM2.5 history for one sensor and time window."""
     rows: list[telemetry.AirQualityReading] = []
     rejected = 0
     for page in range(1, MAX_PAGES + 1):

@@ -1,3 +1,4 @@
+"""Seven-day backfill orchestration across FIRMS, OpenAQ, and Open-Meteo."""
 from __future__ import annotations
 
 import asyncio
@@ -27,6 +28,7 @@ HANDLED_ERRORS: Final[tuple[type[BaseException], ...]] = (
 
 
 async def backfill(settings: Settings, *, run_at: datetime | None = None) -> dict[str, str]:
+    """Run one backfill pass over all sources; return per-source status."""
     moment = (run_at or datetime.now(UTC)).astimezone(UTC)
     start = moment - timedelta(days=BACKFILL_DAYS)
     statuses: dict[str, str] = {}
@@ -88,6 +90,7 @@ async def backfill(settings: Settings, *, run_at: datetime | None = None) -> dic
 
 
 def main() -> None:
+    """CLI entry point: load settings, run the backfill, print per-source status."""
     from dotenv import load_dotenv
 
     load_dotenv()
