@@ -14,7 +14,7 @@ export MESSAGE
 
 .DEFAULT_GOAL := help
 
-.PHONY: help proto lint typecheck test backfill verify serve ask
+.PHONY: help bootstrap proto lint typecheck test backfill verify serve ask
 
 ##@ General
 
@@ -22,6 +22,19 @@ help: ## Show available targets and configurable variables
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m [API_PORT=8000] [WEB_PORT=3000] [MESSAGE=...] [AGENT_MODEL=openai:...] [AGENT_BASE_URL=...]\n"} \
 		/^[a-zA-Z0-9_-]+:.*##/ { printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2 } \
 		/^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
+
+##@ Setup
+
+bootstrap: ## One-command dev setup: preflight, uv sync (.venv), npm ci (apps/web), prek
+	@command -v uv >/dev/null 2>&1 || { echo "err: uv not found — install: curl -LsSf https://astral.sh/uv/install.sh | sh"; exit 1; }
+	@command -v npm >/dev/null 2>&1 || { echo "err: npm not found — install Node.js 20+ (https://nodejs.org)"; exit 1; }
+	@node_major=$$(node -p 'Number(process.versions.node.split(".")[0])' 2>/dev/null || echo 0); \
+		[ "$$node_major" -ge 20 ] || echo "warn: Node.js 20+ expected (web test deps are pinned for it)"
+	uv sync
+	npm ci --prefix apps/web
+	@command -v prek >/dev/null 2>&1 || uv tool install prek
+	@[ -d "$${DATA_DIR:-$(CURDIR)/.local_datalake}" ] || echo "warn: no datalake at $${DATA_DIR:-$(CURDIR)/.local_datalake} — run make backfill before make serve"
+	@echo "bootstrap complete — make verify to gate, make serve to run"
 
 ##@ Verification & Data
 

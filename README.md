@@ -64,6 +64,7 @@ Phased build per [`specs/README.md` §2](specs/README.md) — one phase per PR:
 ```bash
 git clone git@github.com:mlhamel/inversa-home-challenge.git && cd inversa-home-challenge
 cp .env.example .env          # BBOX, DATA_DIR, FIRMS_MAP_KEY, OPENAQ_API_KEY
+make bootstrap                # one-time setup: uv sync (.venv) + npm ci (apps/web) + prek
 make proto                    # lint .protos + regenerate Python/TS bindings
 make verify                   # protolint + prek/ruff + mypy --strict + pytest
 make backfill                 # 7 days of real Parquet into ./.local_datalake
