@@ -43,6 +43,12 @@ variable "agent_model" {
   default     = ""
 }
 
+variable "agent_base_url" {
+  type        = string
+  description = "Agent OpenAI-compatible base URL (AGENT_BASE_URL); empty keeps the provider default endpoint."
+  default     = ""
+}
+
 variable "backend_image" {
   type        = string
   description = "Container image for web-api; empty falls back to the Artifact Registry backend:latest."
