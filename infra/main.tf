@@ -293,7 +293,7 @@ resource "google_project_iam_member" "scheduler_token_creator" {
 resource "google_cloud_scheduler_job" "trigger_ingestion" {
   name             = "trigger-ingestion"
   region           = var.region
-  schedule         = "*/30 * * * *"
+  schedule         = "0 */2 * * *"
   time_zone        = "UTC"
   attempt_deadline = "1200s"
 

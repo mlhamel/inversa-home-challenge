@@ -11,7 +11,7 @@ and how to read the outcome. Everything here reflects the deployed setup in
 | Job | Cloud Run Job `ingestion-job` — runs `python -m inversa.ingestion.backfill` |
 | Window | fixed 7 days (`BACKFILL_DAYS = 7` in `backfill.py`) — FIRMS day ranges, OpenAQ `/sensors/{id}/hours` history, Open-Meteo `past_days=7` |
 | Output | ZSTD Parquet written to the datalake GCS bucket, GCS-mounted at `/mnt/data` (`DATA_DIR`) — the same files `web-api` reads through DuckDB |
-| Schedule | Cloud Scheduler `trigger-ingestion`, `*/30 * * * *` UTC — prod self-refreshes every 30 minutes |
+| Schedule | Cloud Scheduler `trigger-ingestion`, `0 */2 * * *` UTC — prod self-refreshes every 2 hours |
 | Timeout | job `timeout = "1200s"` (worst case ~20 min per run) |
 
 ## Trigger a manual run (prod)
