@@ -17,7 +17,14 @@ lint:
 typecheck:
 	@src=$$(ls -d services packages 2>/dev/null); \
 	if [ -n "$$src" ]; then \
-		uv run mypy --strict $$src; \
+		status=0; \
+		for d in services/*/ packages/*/; do \
+			if [ -n "$$(find "$$d" -name '*.py' 2>/dev/null | head -1)" ]; then \
+				echo "mypy: $$d"; \
+				uv run mypy --strict "$$d" || status=1; \
+			fi; \
+		done; \
+		exit $$status; \
 	else \
 		echo "skip typecheck: no python sources yet"; \
 	fi

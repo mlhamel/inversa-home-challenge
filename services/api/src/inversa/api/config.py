@@ -1,0 +1,22 @@
+"""Environment-driven API settings."""
+from __future__ import annotations
+
+import os
+from collections.abc import Mapping
+from pathlib import Path
+
+from pydantic import BaseModel, ConfigDict
+
+
+class Settings(BaseModel):
+    """Frozen API configuration parsed from the environment."""
+    model_config = ConfigDict(frozen=True)
+
+    data_dir: Path
+
+
+def load_settings(env: Mapping[str, str] | None = None) -> Settings:
+    """Build Settings from a mapping (defaults to os.environ)."""
+    source = os.environ if env is None else env
+    raw = source.get("DATA_DIR") or "./.local_datalake"
+    return Settings(data_dir=Path(raw))
