@@ -22,27 +22,8 @@ STALE_AFTER: Final[timedelta] = timedelta(hours=2)
 PM25_MIN: Final[float] = 0.0
 PM25_MAX: Final[float] = 1500.0
 
-_CONFIDENCE_BY_SYMBOL: Final[dict[str, telemetry.FireConfidence]] = {
-    "h": telemetry.FIRE_CONFIDENCE_HIGH,
-    "high": telemetry.FIRE_CONFIDENCE_HIGH,
-    "n": telemetry.FIRE_CONFIDENCE_NOMINAL,
-    "nominal": telemetry.FIRE_CONFIDENCE_NOMINAL,
-    "l": telemetry.FIRE_CONFIDENCE_LOW,
-    "low": telemetry.FIRE_CONFIDENCE_LOW,
-}
 
 GRID_DEGREE: Final[float] = 0.25
-
-
-def _require_timestamps(ingested_at: datetime, observed_at: datetime, label: str) -> None:
-    if observed_at.tzinfo is None or ingested_at.tzinfo is None:
-        raise ValidationError(f"{label}: timestamps must be timezone-aware UTC")
-
-
-def _require_finite(value: float, label: str) -> float:
-    if value != value or value in (float("inf"), float("-inf")):
-        raise ValidationError(f"{label}: value must be finite, got {value!r}")
-    return value
 
 
 def fire_confidence_from_symbol(symbol: str) -> telemetry.FireConfidence:
@@ -165,3 +146,24 @@ def wind_vector(
         vector.boundary_layer_height = max(0.0, boundary)
     vector.grid_id = grid_id(lat, lon)
     return vector
+
+
+_CONFIDENCE_BY_SYMBOL: Final[dict[str, telemetry.FireConfidence]] = {
+    "h": telemetry.FIRE_CONFIDENCE_HIGH,
+    "high": telemetry.FIRE_CONFIDENCE_HIGH,
+    "n": telemetry.FIRE_CONFIDENCE_NOMINAL,
+    "nominal": telemetry.FIRE_CONFIDENCE_NOMINAL,
+    "l": telemetry.FIRE_CONFIDENCE_LOW,
+    "low": telemetry.FIRE_CONFIDENCE_LOW,
+}
+
+
+def _require_timestamps(ingested_at: datetime, observed_at: datetime, label: str) -> None:
+    if observed_at.tzinfo is None or ingested_at.tzinfo is None:
+        raise ValidationError(f"{label}: timestamps must be timezone-aware UTC")
+
+
+def _require_finite(value: float, label: str) -> float:
+    if value != value or value in (float("inf"), float("-inf")):
+        raise ValidationError(f"{label}: value must be finite, got {value!r}")
+    return value

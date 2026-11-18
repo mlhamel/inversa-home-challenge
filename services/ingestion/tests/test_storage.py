@@ -11,35 +11,6 @@ from inversa.ingestion.validate import air_quality
 from samples import FIRMS_HEADER, FIRMS_ROW_A, FIRMS_ROW_D, RUN_AT
 
 
-def _fires_frame() -> pl.DataFrame:
-    payload = "\n".join([FIRMS_HEADER, FIRMS_ROW_A, FIRMS_ROW_D])
-    return fetch_firms.collect_sync(payload, ingested_at=RUN_AT).df
-
-
-def _air_frame() -> pl.DataFrame:
-    readings = [
-        air_quality(
-            observed_at=datetime(2026, 11, 16, 23, 0, tzinfo=UTC),
-            ingested_at=RUN_AT,
-            station_id="2009",
-            station_name="San Francisco",
-            lat=37.7658,
-            lon=-122.3978,
-            pm25=7.5,
-        ),
-        air_quality(
-            observed_at=datetime(2026, 11, 17, 0, 0, tzinfo=UTC),
-            ingested_at=RUN_AT,
-            station_id="2009",
-            station_name="San Francisco",
-            lat=37.7658,
-            lon=-122.3978,
-            pm25=8.1,
-        ),
-    ]
-    return air_quality_rows(readings)
-
-
 def test_record_batch_writes_partitioned_parquet(tmp_path: Path, run_at: datetime) -> None:
     paths = record_batch(_fires_frame(), root=tmp_path, source="nasa_firms", run_at=run_at)
 
@@ -111,3 +82,32 @@ def test_record_failure_logs_failed_row(tmp_path: Path, run_at: datetime) -> Non
     assert row["known_latency_minutes"] == 0
     assert row["latest_data_ts"] is None
     assert not (tmp_path / "weather").exists()
+
+
+def _fires_frame() -> pl.DataFrame:
+    payload = "\n".join([FIRMS_HEADER, FIRMS_ROW_A, FIRMS_ROW_D])
+    return fetch_firms.collect_sync(payload, ingested_at=RUN_AT).df
+
+
+def _air_frame() -> pl.DataFrame:
+    readings = [
+        air_quality(
+            observed_at=datetime(2026, 11, 16, 23, 0, tzinfo=UTC),
+            ingested_at=RUN_AT,
+            station_id="2009",
+            station_name="San Francisco",
+            lat=37.7658,
+            lon=-122.3978,
+            pm25=7.5,
+        ),
+        air_quality(
+            observed_at=datetime(2026, 11, 17, 0, 0, tzinfo=UTC),
+            ingested_at=RUN_AT,
+            station_id="2009",
+            station_name="San Francisco",
+            lat=37.7658,
+            lon=-122.3978,
+            pm25=8.1,
+        ),
+    ]
+    return air_quality_rows(readings)

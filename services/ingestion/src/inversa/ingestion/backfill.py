@@ -26,62 +26,6 @@ HANDLED_ERRORS: Final[tuple[type[BaseException], ...]] = (
 )
 
 
-async def _collect_firms(
-    client: httpx.AsyncClient, settings: Settings, run_at: datetime
-) -> tuple[pl.DataFrame, int]:
-    results = [
-        await fetch_firms.collect(
-            client, settings, ingested_at=run_at, day_range=FIRMS_RECENT_RANGE
-        ),
-        await fetch_firms.collect(
-            client,
-            settings,
-            ingested_at=run_at,
-            day_range=FIRMS_OLDER_RANGE,
-            end_date=(run_at - FIRMS_OLDER_OFFSET).date(),
-        ),
-    ]
-    frames = [result.df for result in results]
-    df = pl.concat(frames, how="vertical").unique(
-        subset=["fire_id"], keep="first", maintain_order=True
-    )
-    return df, sum(result.rejected for result in results)
-
-
-async def _collect_openaq_hours(
-    client: httpx.AsyncClient,
-    settings: Settings,
-    run_at: datetime,
-    start: datetime,
-    pacer: Pacer,
-) -> tuple[pl.DataFrame, int]:
-    stations = await fetch_openaq.collect_stations(
-        client, api_key=settings.openaq_api_key, bbox=settings.bbox_str, pacer=pacer
-    )
-    if not stations:
-        return pl.DataFrame(schema=AIR_QUALITY_SCHEMA), 0
-    semaphore = asyncio.Semaphore(fetch_openaq.CONCURRENCY)
-
-    async def one(station: fetch_openaq.Station) -> CollectorResult:
-        async with semaphore:
-            return await fetch_openaq.collect_sensor_hours(
-                client,
-                api_key=settings.openaq_api_key,
-                station=station,
-                datetime_from=start,
-                datetime_to=run_at,
-                ingested_at=run_at,
-                pacer=pacer,
-            )
-
-    responses = await asyncio.gather(*(one(station) for station in stations))
-    frames = [response.df for response in responses]
-    return (
-        pl.concat(frames, how="vertical"),
-        sum(response.rejected for response in responses),
-    )
-
-
 async def backfill(settings: Settings, *, run_at: datetime | None = None) -> dict[str, str]:
     moment = (run_at or datetime.now(UTC)).astimezone(UTC)
     start = moment - timedelta(days=BACKFILL_DAYS)
@@ -150,6 +94,62 @@ def main() -> None:
     summary = asyncio.run(backfill(load_settings()))
     for source, status in sorted(summary.items()):
         print(f"{source}: {status}")
+
+
+async def _collect_firms(
+    client: httpx.AsyncClient, settings: Settings, run_at: datetime
+) -> tuple[pl.DataFrame, int]:
+    results = [
+        await fetch_firms.collect(
+            client, settings, ingested_at=run_at, day_range=FIRMS_RECENT_RANGE
+        ),
+        await fetch_firms.collect(
+            client,
+            settings,
+            ingested_at=run_at,
+            day_range=FIRMS_OLDER_RANGE,
+            end_date=(run_at - FIRMS_OLDER_OFFSET).date(),
+        ),
+    ]
+    frames = [result.df for result in results]
+    df = pl.concat(frames, how="vertical").unique(
+        subset=["fire_id"], keep="first", maintain_order=True
+    )
+    return df, sum(result.rejected for result in results)
+
+
+async def _collect_openaq_hours(
+    client: httpx.AsyncClient,
+    settings: Settings,
+    run_at: datetime,
+    start: datetime,
+    pacer: Pacer,
+) -> tuple[pl.DataFrame, int]:
+    stations = await fetch_openaq.collect_stations(
+        client, api_key=settings.openaq_api_key, bbox=settings.bbox_str, pacer=pacer
+    )
+    if not stations:
+        return pl.DataFrame(schema=AIR_QUALITY_SCHEMA), 0
+    semaphore = asyncio.Semaphore(fetch_openaq.CONCURRENCY)
+
+    async def one(station: fetch_openaq.Station) -> CollectorResult:
+        async with semaphore:
+            return await fetch_openaq.collect_sensor_hours(
+                client,
+                api_key=settings.openaq_api_key,
+                station=station,
+                datetime_from=start,
+                datetime_to=run_at,
+                ingested_at=run_at,
+                pacer=pacer,
+            )
+
+    responses = await asyncio.gather(*(one(station) for station in stations))
+    frames = [response.df for response in responses]
+    return (
+        pl.concat(frames, how="vertical"),
+        sum(response.rejected for response in responses),
+    )
 
 
 if __name__ == "__main__":

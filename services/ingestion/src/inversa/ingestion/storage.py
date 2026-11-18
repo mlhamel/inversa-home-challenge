@@ -30,32 +30,6 @@ SOURCE_SPECS: Final[dict[str, SourceSpec]] = {
 }
 
 
-def _append_log(
-    root: Path,
-    *,
-    source: str,
-    run_at: datetime,
-    records: int,
-    latest: datetime | None,
-    status: str,
-) -> None:
-    row = pl.DataFrame(
-        {
-            "source": [source],
-            "run_at": [run_at],
-            "latest_data_ts": [latest],
-            "known_latency_minutes": [SOURCE_SPECS[source].latency_minutes],
-            "records_written": [records],
-            "status": [status],
-        },
-        schema=LOG_SCHEMA,
-    )
-    path = root / "meta" / "ingestion_log.parquet"
-    table = row if not path.exists() else pl.read_parquet(path).vstack(row)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    table.write_parquet(path, compression="zstd")
-
-
 def record_batch(
     df: pl.DataFrame,
     *,
@@ -85,3 +59,29 @@ def record_batch(
 
 def record_failure(root: Path, *, source: str, run_at: datetime) -> None:
     _append_log(root, source=source, run_at=run_at, records=0, latest=None, status="failed")
+
+
+def _append_log(
+    root: Path,
+    *,
+    source: str,
+    run_at: datetime,
+    records: int,
+    latest: datetime | None,
+    status: str,
+) -> None:
+    row = pl.DataFrame(
+        {
+            "source": [source],
+            "run_at": [run_at],
+            "latest_data_ts": [latest],
+            "known_latency_minutes": [SOURCE_SPECS[source].latency_minutes],
+            "records_written": [records],
+            "status": [status],
+        },
+        schema=LOG_SCHEMA,
+    )
+    path = root / "meta" / "ingestion_log.parquet"
+    table = row if not path.exists() else pl.read_parquet(path).vstack(row)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    table.write_parquet(path, compression="zstd")
