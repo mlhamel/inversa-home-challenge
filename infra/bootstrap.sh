@@ -20,6 +20,9 @@ gcloud config set project "$PROJECT_ID"
 
 step "enabling APIs"
 gcloud services enable \
+  cloudresourcemanager.googleapis.com \
+  serviceusage.googleapis.com \
+  iam.googleapis.com \
   run.googleapis.com \
   storage.googleapis.com \
   cloudscheduler.googleapis.com \
