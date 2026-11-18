@@ -16,6 +16,7 @@ class ContractError(ValueError):
 
 DATETIME: Final = pl.Datetime("us", "UTC")
 
+
 FIRES_SCHEMA: Final[pl.Schema] = pl.Schema({
     "fire_id": pl.String(),
     "observed_at": DATETIME,
@@ -26,6 +27,7 @@ FIRES_SCHEMA: Final[pl.Schema] = pl.Schema({
     "confidence": pl.String(),
     "satellite": pl.String(),
 })
+
 
 AIR_QUALITY_SCHEMA: Final[pl.Schema] = pl.Schema({
     "measurement_id": pl.String(),
@@ -39,6 +41,7 @@ AIR_QUALITY_SCHEMA: Final[pl.Schema] = pl.Schema({
     "quality_flag": pl.String(),
 })
 
+
 WEATHER_SCHEMA: Final[pl.Schema] = pl.Schema({
     "grid_id": pl.String(),
     "observed_at": DATETIME,
@@ -49,18 +52,6 @@ WEATHER_SCHEMA: Final[pl.Schema] = pl.Schema({
     "wind_direction_10m": pl.Float32(),
     "boundary_layer_height": pl.Float32(),
 })
-
-_FIRE_CONFIDENCE_TOKENS: Final[dict[int, str]] = {
-    telemetry.FIRE_CONFIDENCE_LOW: "low",
-    telemetry.FIRE_CONFIDENCE_NOMINAL: "nominal",
-    telemetry.FIRE_CONFIDENCE_HIGH: "high",
-}
-
-_QUALITY_FLAG_TOKENS: Final[dict[int, str]] = {
-    telemetry.QUALITY_FLAG_VALID: "valid",
-    telemetry.QUALITY_FLAG_OUTLIER: "outlier",
-    telemetry.QUALITY_FLAG_STALE: "stale",
-}
 
 
 def stamp(moment: datetime) -> timestamp_pb2.Timestamp:
@@ -156,3 +147,17 @@ def wind_rows(vectors: Iterable[telemetry.WindVector]) -> pl.DataFrame:
             )
         )
     return pl.DataFrame(rows, schema=WEATHER_SCHEMA, orient="row")
+
+
+_FIRE_CONFIDENCE_TOKENS: Final[dict[int, str]] = {
+    telemetry.FIRE_CONFIDENCE_LOW: "low",
+    telemetry.FIRE_CONFIDENCE_NOMINAL: "nominal",
+    telemetry.FIRE_CONFIDENCE_HIGH: "high",
+}
+
+
+_QUALITY_FLAG_TOKENS: Final[dict[int, str]] = {
+    telemetry.QUALITY_FLAG_VALID: "valid",
+    telemetry.QUALITY_FLAG_OUTLIER: "outlier",
+    telemetry.QUALITY_FLAG_STALE: "stale",
+}

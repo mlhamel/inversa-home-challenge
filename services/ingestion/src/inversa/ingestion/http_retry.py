@@ -39,6 +39,37 @@ class Pacer:
             self._next_start = now + self._min_interval
 
 
+async def get_with_retry(
+    client: httpx.AsyncClient,
+    url: str,
+    *,
+    params: dict[str, str | int] | None = None,
+    headers: dict[str, str] | None = None,
+    request_timeout: float | httpx.Timeout = 60.0,
+    pacer: Pacer | None = None,
+) -> httpx.Response:
+    for attempt in range(1, MAX_ATTEMPTS + 1):
+        last_response: httpx.Response | None = None
+        try:
+            if pacer is not None:
+                await pacer.acquire()
+            response = await client.get(
+                url, params=params, headers=headers, timeout=request_timeout
+            )
+            response.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code not in RETRYABLE_STATUS or attempt == MAX_ATTEMPTS:
+                raise
+            last_response = exc.response
+        except httpx.TransportError:
+            if attempt == MAX_ATTEMPTS:
+                raise
+        else:
+            return response
+        await sleep_for(_delay_after_failure(last_response, attempt))
+    raise RuntimeError("get_with_retry exhausted attempts without returning a response")
+
+
 def _hint_seconds(value: str) -> float | None:
     try:
         return max(0.0, min(RATE_LIMIT_MAX_SECONDS, float(value)))
@@ -73,34 +104,3 @@ def _delay_after_failure(response: httpx.Response | None, attempt: int) -> float
         return hint
     bounded: float = min(MAX_DELAY_SECONDS, BASE_DELAY_SECONDS * 2 ** (attempt - 1))
     return bounded + random.uniform(0.0, 0.25)
-
-
-async def get_with_retry(
-    client: httpx.AsyncClient,
-    url: str,
-    *,
-    params: dict[str, str | int] | None = None,
-    headers: dict[str, str] | None = None,
-    request_timeout: float | httpx.Timeout = 60.0,
-    pacer: Pacer | None = None,
-) -> httpx.Response:
-    for attempt in range(1, MAX_ATTEMPTS + 1):
-        last_response: httpx.Response | None = None
-        try:
-            if pacer is not None:
-                await pacer.acquire()
-            response = await client.get(
-                url, params=params, headers=headers, timeout=request_timeout
-            )
-            response.raise_for_status()
-        except httpx.HTTPStatusError as exc:
-            if exc.response.status_code not in RETRYABLE_STATUS or attempt == MAX_ATTEMPTS:
-                raise
-            last_response = exc.response
-        except httpx.TransportError:
-            if attempt == MAX_ATTEMPTS:
-                raise
-        else:
-            return response
-        await sleep_for(_delay_after_failure(last_response, attempt))
-    raise RuntimeError("get_with_retry exhausted attempts without returning a response")

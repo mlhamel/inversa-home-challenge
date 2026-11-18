@@ -26,16 +26,6 @@ GRID_B: Final[tuple[float, float]] = (38.5, -121.5)
 WINDOW_START: Final[datetime] = RUN_AT - timedelta(days=7)
 
 
-def _capturing_handler(
-    payload: Any, captured: list[httpx.Request]
-) -> Callable[[httpx.Request], httpx.Response]:
-    def handler(request: httpx.Request) -> httpx.Response:
-        captured.append(request)
-        return httpx.Response(200, json=payload)
-
-    return handler
-
-
 def test_points_from_frames_rounds_dedupes_and_sorts() -> None:
     frame = pl.DataFrame({"lat": [38.5816, 37.7658], "lon": [-121.4944, -122.3978]})
     dupes = pl.DataFrame({"lat": [37.7749], "lon": [-122.4194]})
@@ -195,3 +185,13 @@ async def test_collect_without_points_makes_no_request(
     assert result.df.schema == WEATHER_SCHEMA
     assert result.rejected == 0
     assert captured == []
+
+
+def _capturing_handler(
+    payload: Any, captured: list[httpx.Request]
+) -> Callable[[httpx.Request], httpx.Response]:
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured.append(request)
+        return httpx.Response(200, json=payload)
+
+    return handler

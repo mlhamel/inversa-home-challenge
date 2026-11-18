@@ -24,14 +24,6 @@ from samples import (
 )
 
 
-def _capture(captured: list[httpx.Request], body: str) -> Callable[[httpx.Request], httpx.Response]:
-    def handler(request: httpx.Request) -> httpx.Response:
-        captured.append(request)
-        return httpx.Response(200, text=body)
-
-    return handler
-
-
 def test_collect_sync_with_empty_payload_yields_empty_frame() -> None:
     result = fetch_firms.collect_sync(EMPTY_FIRMS_CSV, ingested_at=RUN_AT)
     assert result.df.height == 0
@@ -125,3 +117,11 @@ async def test_collect_raises_on_http_error(settings: Settings) -> None:
     async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
         with pytest.raises(httpx.HTTPStatusError):
             await fetch_firms.collect(client, settings, ingested_at=RUN_AT, day_range=1)
+
+
+def _capture(captured: list[httpx.Request], body: str) -> Callable[[httpx.Request], httpx.Response]:
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured.append(request)
+        return httpx.Response(200, text=body)
+
+    return handler

@@ -28,6 +28,7 @@ Before considering any task or phase complete, you MUST run and pass:
 ## 4. Coding Standards
 - **Python (`3.12+`):** Managed with `uv` workspaces. Full type annotations required (`mypy --strict` must pass). Use `pydantic` `BaseModel`s (with `model_config = ConfigDict(frozen=True)` when immutability is needed) for all Python value objects — never `dataclasses`. Use `Polars` (never `Pandas`) for ingestion transformations and `httpx.AsyncClient` for external API calls. All Python code lives under the `inversa` PEP 420 namespace: packages are `inversa.<service>.*` (e.g. `inversa.ingestion`), never a bare top-level `<service>` package, and `src/inversa/` must not contain an `__init__.py` (so `inversa.v1` from generated proto bindings merges into the same namespace).
 - **SQL (`DuckDB`):** Parameterize all dynamic inputs (`$target_ts`, `$radius_km`). Keep spatial calculations (`ST_Azimuth`, `ST_Distance_Spheroid`, `ASOF JOIN`) inside `services/api/src/db/queries/`.
+- **Module layout:** In every Python module, public symbols (docstring, imports, constants, classes, functions) come first; underscore-prefixed privates go last, before any `__main__` guard. Applies to src and test code; generated `inversa.v1` bindings are excluded (buf-owned).
 - **TypeScript (`Next.js` App Router):** Strict TypeScript (`noImplicitAny`). Consume generated types from `apps/web/src/generated/inversa/v1/`.
 
 ## 5. Phased Execution Workflow
