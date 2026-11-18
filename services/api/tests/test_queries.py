@@ -54,6 +54,25 @@ STATION_HOUR_ROW: dict[str, Any] = {
     "station_lat": 37.0,
     "station_lon": -122.0,
 }
+WIND_ONLY_HOUR_ROW: dict[str, Any] = {
+    "hour_bucket": ts(14, 0),
+    "avg_pm25": None,
+    "max_pm25": None,
+    "reading_count": 0,
+    "valid_count": 0,
+    "stale_count": 0,
+    "outlier_count": 0,
+    "wind_speed_10m": 12.0,
+    "wind_direction_10m": 90.0,
+    "fire_count": 0,
+    "fire_id": None,
+    "fire_frp": None,
+    "fire_distance_km": None,
+    "station_id": "STA-DOWN",
+    "station_name": "Downslope Ridge",
+    "station_lat": 37.0,
+    "station_lon": -122.0,
+}
 WORST_ROWS: list[dict[str, Any]] = [
     {
         "station_id": "STA-SIDE",
@@ -129,7 +148,18 @@ def test_run_station_timeseries_returns_pinned_profile(booted_engine: Settings) 
         )
     finally:
         cursor.close()
-    assert [row.model_dump() for row in rows] == [STATION_HOUR_ROW]
+    assert [row.model_dump() for row in rows] == [STATION_HOUR_ROW, WIND_ONLY_HOUR_ROW]
+
+
+def test_run_station_timeseries_returns_wind_only_bucket(booted_engine: Settings) -> None:
+    cursor = open_cursor()
+    try:
+        rows = queries.run_station_timeseries(
+            cursor, station_id="STA-DOWN", start_ts=T14, end_ts=T15
+        )
+    finally:
+        cursor.close()
+    assert [row.model_dump() for row in rows] == [WIND_ONLY_HOUR_ROW]
 
 
 def test_run_worst_air_quality_events_ranks_valid_pm25_only(booted_engine: Settings) -> None:

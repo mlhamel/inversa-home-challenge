@@ -76,10 +76,25 @@ STATION_BUCKET: dict[str, Any] = {
     "nearest_fire_frp_mw": 55.0,
     "nearest_fire_distance_km": 55.5,
 }
+WIND_ONLY_BUCKET: dict[str, Any] = {
+    "hour_bucket": "2026-11-17T14:00:00Z",
+    "pm25_avg_ug_m3": None,
+    "pm25_max_ug_m3": None,
+    "reading_count": 0,
+    "valid_count": 0,
+    "stale_count": 0,
+    "outlier_count": 0,
+    "wind_speed_kmh": 12.0,
+    "wind_direction_deg": 90.0,
+    "nearby_fire_count": 0,
+    "nearest_fire_id": None,
+    "nearest_fire_frp_mw": None,
+    "nearest_fire_distance_km": None,
+}
 T2_HIT: dict[str, Any] = {
     "summary_for_llm": (
         "Hourly PM2.5 profile for Downslope Ridge (STA-DOWN) between 2026-11-17T13:00:00Z and "
-        "2026-11-17T15:00:00Z: 1 hourly bucket(s); peak 85.0 ug/m3."
+        "2026-11-17T15:00:00Z: 2 hourly bucket(s); peak 85.0 ug/m3."
     ),
     "data_quality_notes": [
         "1 stale and 0 outlier reading(s) in the window are kept in per-hour counts but "
@@ -92,7 +107,7 @@ T2_HIT: dict[str, Any] = {
         "bbox_focus": [-122.0, 37.0, -122.0, 37.5],
     },
     "matches": [],
-    "timeseries": [STATION_BUCKET],
+    "timeseries": [STATION_BUCKET, WIND_ONLY_BUCKET],
 }
 T2_NO_DATA: dict[str, Any] = {
     "summary_for_llm": (
@@ -171,9 +186,9 @@ FRESH_STABLE: dict[str, dict[str, Any]] = {
     },
     "open_meteo": {
         "last_run_at": "2026-11-17T14:30:00Z",
-        "latest_data_ts": "2026-11-17T13:58:00Z",
+        "latest_data_ts": "2026-11-17T14:50:00Z",
         "known_latency_minutes": 0,
-        "records_written": 3,
+        "records_written": 4,
         "status": "success",
     },
 }
@@ -206,7 +221,7 @@ RES_CAPS: dict[str, Any] = {
             "max_lon": -121.9,
         },
         "wind_grid": {
-            "records": 2,
+            "records": 3,
             "min_lat": 37.0,
             "max_lat": 37.5,
             "min_lon": -122.0,
