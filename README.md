@@ -112,5 +112,6 @@ reads them via `value_source`, never plain env vars). Idle cost is ≈ $0 —
 ## Documentation
 
 - [`specs/`](specs/README.md) — the authoritative specifications (00: vision · 01: contracts · 02: ingestion · 03: DuckDB engine · 04: MCP · 05: API/agent · 06: frontend · 07: infra · 08: agent behavior · 09: QA/load)
+- [`playbooks/`](playbooks/) — operational how-tos ([run a historical data backfill](playbooks/backfill.md))
 - [`AGENTS.md`](AGENTS.md) — repository constitution: hard architectural boundaries and verification loop
 - [`docs/inversa-take-home-challenge.pdf`](docs/inversa-take-home-challenge.pdf) — the original challenge brief
