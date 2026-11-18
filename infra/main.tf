@@ -76,11 +76,7 @@ resource "google_secret_manager_secret_iam_member" "consumers" {
 
   secret_id = google_secret_manager_secret.app_secrets[each.key].id
   role      = "roles/secretmanager.secretAccessor"
-  member = "serviceAccount:${
-    each.value.consumed_by == "web_api"
-    ? google_service_account.api_sa.email
-    : google_service_account.ingestion_sa.email
-  }"
+  member    = "serviceAccount:${local.secret_consumers[each.value.consumed_by]}"
 }
 
 resource "google_cloud_run_v2_service" "web_api" {
@@ -152,15 +148,9 @@ resource "google_cloud_run_v2_service" "web_api" {
   depends_on = [
     google_project_service.enabled["run.googleapis.com"],
     google_project_service.enabled["storage-component.googleapis.com"],
+    google_secret_manager_secret_iam_member.consumers,
     google_secret_manager_secret_version.app_secret_versions,
   ]
-}
-
-resource "google_cloud_run_v2_service_iam_member" "web_api_public" {
-  name     = google_cloud_run_v2_service.web_api.name
-  location = var.region
-  role     = "roles/run.invoker"
-  member   = "allUsers"
 }
 
 resource "google_cloud_run_v2_service_iam_member" "web_api_ui_invoker" {
@@ -179,7 +169,59 @@ resource "google_cloud_run_v2_service" "web_ui" {
   template {
     service_account = google_service_account.web_sa.email
 
+    volumes {
+      name = "nginx-conf"
+      secret {
+        secret = google_secret_manager_secret.app_secrets["web-ui-nginx-conf"].secret_id
+
+        items {
+          path    = "default.conf"
+          version = "latest"
+        }
+      }
+    }
+
+    volumes {
+      name = "htpasswd"
+      secret {
+        secret = google_secret_manager_secret.app_secrets["web-ui-htpasswd"].secret_id
+
+        items {
+          path    = ".htpasswd"
+          version = "latest"
+        }
+      }
+    }
+
     containers {
+      name  = "nginx"
+      image = "mirror.gcr.io/library/nginx:stable"
+
+      resources {
+        limits = {
+          cpu    = "1"
+          memory = "256Mi"
+        }
+      }
+
+      ports {
+        name           = "http1"
+        container_port = 8080
+      }
+
+      volume_mounts {
+        name       = "nginx-conf"
+        mount_path = "/etc/nginx/conf.d"
+      }
+
+      volume_mounts {
+        name       = "htpasswd"
+        mount_path = "/etc/nginx/secrets"
+      }
+    }
+
+    containers {
+      name  = "nextjs"
       image = local.frontend_image
 
       resources {
@@ -190,13 +232,27 @@ resource "google_cloud_run_v2_service" "web_ui" {
       }
 
       env {
+        name  = "PORT"
+        value = "3000"
+      }
+
+      env {
         name  = "NEXT_PUBLIC_API_URL"
+        value = google_cloud_run_v2_service.web_api.uri
+      }
+
+      env {
+        name  = "API_AUDIENCE"
         value = google_cloud_run_v2_service.web_api.uri
       }
     }
   }
 
-  depends_on = [google_project_service.enabled["run.googleapis.com"]]
+  depends_on = [
+    google_project_service.enabled["run.googleapis.com"],
+    google_secret_manager_secret_iam_member.consumers,
+    google_secret_manager_secret_version.app_secret_versions,
+  ]
 }
 
 resource "google_cloud_run_v2_service_iam_member" "web_ui_public" {
@@ -269,6 +325,7 @@ resource "google_cloud_run_v2_job" "ingestion" {
   depends_on = [
     google_project_service.enabled["run.googleapis.com"],
     google_project_service.enabled["storage-component.googleapis.com"],
+    google_secret_manager_secret_iam_member.consumers,
     google_secret_manager_secret_version.app_secret_versions,
   ]
 }

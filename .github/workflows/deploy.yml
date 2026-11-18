@@ -139,7 +139,9 @@ jobs:
           TF_VAR_agent_api_key: ${{ secrets.OLLAMA_API_KEY }}
           TF_VAR_agent_model: ${{ vars.AGENT_MODEL }}
           TF_VAR_agent_base_url: ${{ vars.AGENT_BASE_URL }}
+          WEB_UI_HTPASSWD_SECRET: ${{ secrets.WEB_UI_HTPASSWD }}
         run: |
+          if [ -n "$WEB_UI_HTPASSWD_SECRET" ]; then export TF_VAR_web_ui_htpasswd="$WEB_UI_HTPASSWD_SECRET"; fi
           terraform -chdir=infra fmt -check
           terraform -chdir=infra init -input=false
           terraform -chdir=infra validate
