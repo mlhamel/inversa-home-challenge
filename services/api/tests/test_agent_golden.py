@@ -67,12 +67,17 @@ def _grouped(frames: list[tuple[str, dict[str, Any]]]) -> dict[str, list[dict[st
 
 
 def test_system_prompt_enforces_grounding_guardrails() -> None:
-    """The persona text carries every spec-08 section 1 rule."""
+    """The persona text carries every spec-08 section 1 rule plus the output contract."""
     assert "~3 hours" in SYSTEM_PROMPT
     assert "never state a PM2.5 value" in SYSTEM_PROMPT
     assert "`stale`" in SYSTEM_PROMPT and "`outlier`" in SYSTEM_PROMPT
     assert "no active fires" in SYSTEM_PROMPT
     assert "boundary_layer_height" in SYSTEM_PROMPT
+    assert "Output contract for every reply" in SYSTEM_PROMPT
+    assert "at most 3 one-line evidence bullets" in SYSTEM_PROMPT
+    assert "at most 2 one-line caveats" in SYSTEM_PROMPT
+    assert "Never append a second bottom-line summary" in SYSTEM_PROMPT
+    assert "under 120 words" in SYSTEM_PROMPT
 
 
 def test_freshness_resource_is_readable(mcp_server: FastMCP) -> None:
