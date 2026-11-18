@@ -43,7 +43,7 @@ A map + timeline interface driven by a natural-language agent:
 | Ingestion | [`services/ingestion`](services/ingestion/README.md) | Cloud Run Job: FIRMS / OpenAQ / Open-Meteo collectors → Parquet datalake |
 | API | `services/api` (Phase 3+) | FastAPI + FastMCP + in-memory DuckDB + PydanticAI agent |
 | Web | [`apps/web`](apps/web/README.md) | Next.js + MapLibre/Deck.gl frontend — *planned, Phase 5* |
-| Infra | `infra/` | Terraform GCP infrastructure — *planned, Phase 6* |
+| Infra | `infra/` | Terraform GCP infrastructure — ✅ Phase 6 |
 
 ## Build status
 
@@ -57,7 +57,7 @@ Phased build per [`specs/README.md` §2](specs/README.md) — one phase per PR:
 | 3. DuckDB + FastMCP | `services/api` engine + `/mcp` | ✅ Done |
 | 4. FastAPI + agent | REST + SSE chat, golden prompts | ✅ Done |
 | 5. Frontend | Map, timeline, chat drawer | ✅ Done |
-| 6. Cloud deployment | Terraform + CI/CD → public demo URL | ⏳ Next |
+| 6. Cloud deployment | Terraform + CI/CD → public demo URL | ✅ Done |
 
 ## Getting started
 
@@ -70,6 +70,44 @@ make verify                   # protolint + prek/ruff + mypy --strict + pytest
 make backfill                 # 7 days of real Parquet into ./.local_datalake
 make serve                    # API on :8000 + web UI on :3000 — Ctrl-C stops both
 ```
+
+## One-time cloud deployment (Phase 6)
+
+The deploy workflow (`.github/workflows/deploy.yml`) runs on every merge to `main`:
+it re-runs the verify gate, builds/pushes the `backend`, `ingestion`, and `frontend`
+images to Artifact Registry, applies `infra/` with Terraform via keyless Workload
+Identity Federation, then executes the `ingestion-job` once so the demo has fresh
+data. Cloud Scheduler refreshes the datalake every 30 minutes (`*/30 * * * *`).
+
+The only manual step is a one-time bootstrap — run from the repo root with an
+Owner-level account (creates the tfstate bucket, Artifact Registry repo, WIF
+pool/provider, and the deployer service account):
+
+```bash
+PROJECT_ID=inversa-home-challenge ./infra/bootstrap.sh
+```
+
+Then set the two variables and three secrets it prints:
+
+```bash
+gh variable set GCP_WIF_PROVIDER --body '<printed provider name>'
+gh variable set GCP_DEPLOY_SA    --body '<printed deployer email>'
+gh secret set FIRMS_MAP_KEY      --body '<NASA FIRMS MAP_KEY>'
+gh secret set OPENAQ_API_KEY     --body '<OpenAQ API key>'
+gh secret set AGENT_API_KEY      --body '<LLM API key>'
+gh variable set AGENT_MODEL      --body 'openai:gpt-4o-mini'   # optional override
+```
+
+`infra/` provisions: `web-api` (FastAPI + FastMCP + DuckDB, 2 vCPU/2 GiB, GCS FUSE
+`/mnt/data` read-only, public invoker), `web-ui` (Next.js, proxies same-origin
+`/api/*` → `web-api`, preserving the zero-CORS design), `ingestion-job` (GCS FUSE
+read-write, writes ZSTD Parquet), the `${PROJECT_ID}-datalake` bucket with a 30-day
+lifecycle rule, the `*/30` scheduler, and Secret Manager entries for the optional
+API keys (created only when the matching GitHub secret is non-empty; Cloud Run
+reads them via `value_source`, never plain env vars). Idle cost is ≈ $0 —
+`min-instances` 0 and no static IP. Local Terraform equivalent: `make infra-init`
+/ `infra-plan` / `infra-apply` (pass secrets with
+`TF_ARGS="-var firms_map_key=..."`).
 
 ## Documentation
 

@@ -111,3 +111,18 @@ ask: ## Stream one agent answer — make ask MESSAGE="..." (RAW=1 for raw SSE)
 	curl -sSN "http://127.0.0.1:$(API_PORT)/api/chat" \
 		-H 'Content-Type: application/json' \
 		-d "$$payload" | $(ASK_SINK)
+
+##@ Cloud (Phase 6)
+
+infra-fmt: ## terraform fmt-check + validate infra/ (no GCP access needed)
+	terraform -chdir=infra fmt -check
+	terraform -chdir=infra validate
+
+infra-init: ## terraform init infra/ against the GCS backend (needs infra/bootstrap.sh first)
+	terraform -chdir=infra init -input=false
+
+infra-plan: ## terraform plan infra/ (pass TF_ARGS="-var firms_map_key=...")
+	terraform -chdir=infra plan -input=false $(TF_ARGS)
+
+infra-apply: ## terraform apply infra/ (pass TF_ARGS="-var firms_map_key=..."; review plan first)
+	terraform -chdir=infra apply -input=false -auto-approve $(TF_ARGS)
