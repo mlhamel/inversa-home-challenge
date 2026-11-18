@@ -135,8 +135,9 @@ jobs:
           TF_VAR_ingestion_image: "${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/inversa/ingestion:${{ steps.tags.outputs.sha_tag }}"
           TF_VAR_firms_map_key: ${{ secrets.FIRMS_MAP_KEY }}
           TF_VAR_openaq_api_key: ${{ secrets.OPENAQ_API_KEY }}
-          TF_VAR_agent_api_key: ${{ secrets.AGENT_API_KEY }}
+          TF_VAR_agent_api_key: ${{ secrets.OLLAMA_API_KEY }}
           TF_VAR_agent_model: ${{ vars.AGENT_MODEL }}
+          TF_VAR_agent_base_url: ${{ vars.AGENT_BASE_URL }}
         run: |
           terraform -chdir=infra fmt -check
           terraform -chdir=infra init -input=false
