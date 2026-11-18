@@ -42,6 +42,8 @@ jobs:
         run: make verify
       - name: web typecheck
         run: npm run typecheck --prefix apps/web
+      - name: web tests
+        run: npm run test --prefix apps/web
       - name: conventional commit subjects
         run: scripts/check_conventional_commits.sh --range "origin/${{ github.base_ref }}..HEAD"
       - name: conventional PR title
