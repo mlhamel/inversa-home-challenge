@@ -113,6 +113,7 @@ jobs:
         run: |
           docker build \
             -f apps/web/Dockerfile \
+            --build-arg "NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL || 'http://localhost:8000' }}" \
             -t "$REGISTRY/$PROJECT_ID/inversa/frontend:${{ steps.tags.outputs.sha_tag }}" \
             -t "$REGISTRY/$PROJECT_ID/inversa/frontend:latest" \
             .
