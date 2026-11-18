@@ -73,8 +73,8 @@ def test_open_cursor_pins_utc_and_spec_axis_order(booted_engine: Settings) -> No
         always_xy = scalar(cursor, "SELECT current_setting('geometry_always_xy')")
     finally:
         cursor.close()
-    assert distance_km == 55.49116779542044
-    assert bearing_deg == 180.0
+    assert distance_km == pytest.approx(55.49116779542044)
+    assert bearing_deg == pytest.approx(180.0)
     assert timezone == "UTC"
     assert always_xy is False
 
