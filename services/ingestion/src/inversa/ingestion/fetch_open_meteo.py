@@ -1,3 +1,4 @@
+"""Open-Meteo historical-forecast wind and boundary-layer collector."""
 from __future__ import annotations
 
 from datetime import UTC, datetime
@@ -20,6 +21,7 @@ Point = tuple[float, float]
 
 
 def points_from_frames(*frames: pl.DataFrame | None) -> list[Point]:
+    """Collect rounded, deduplicated grid points from fire and air-quality frames."""
     points: set[Point] = set()
     for frame in frames:
         if frame is None or frame.height == 0:
@@ -42,6 +44,7 @@ async def collect(
     past_days: int = 1,
     forecast_days: int = 1,
 ) -> CollectorResult:
+    """Fetch hourly wind variables for grid points over a UTC time window."""
     if not points:
         return CollectorResult(df=pl.DataFrame(schema=WEATHER_SCHEMA), rejected=0)
     rounded = [_rounded(point) for point in points]
