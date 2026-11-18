@@ -1,6 +1,7 @@
 AGENT_MODEL ?= openai:glm-5.3-flash:cloud
 AGENT_BASE_URL ?= http://localhost:11434/v1
 API_PORT ?= 8000
+WEB_PORT ?= 3000
 RAW ?= 0
 
 ifeq ($(RAW),1)
@@ -18,7 +19,7 @@ export MESSAGE
 ##@ General
 
 help: ## Show available targets and configurable variables
-	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m [API_PORT=8000] [MESSAGE=...] [AGENT_MODEL=openai:...] [AGENT_BASE_URL=...]\n"} \
+	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m [API_PORT=8000] [WEB_PORT=3000] [MESSAGE=...] [AGENT_MODEL=openai:...] [AGENT_BASE_URL=...]\n"} \
 		/^[a-zA-Z0-9_-]+:.*##/ { printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2 } \
 		/^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
@@ -68,13 +69,25 @@ verify: proto lint typecheck test ## Full gate — proto + lint + typecheck + te
 
 ##@ Local Agent Demo
 
-serve: ## Boot API + MCP + agent on API_PORT (defaults: 8000, openai:glm-5.3-flash:cloud)
+serve: ## Boot API (API_PORT=8000) + web UI (WEB_PORT=3000); Ctrl-C stops both
 	@if [ ! -d "$${DATA_DIR:-$(CURDIR)/.local_datalake}" ]; then \
 		echo "warn: datalake $${DATA_DIR:-$(CURDIR)/.local_datalake} not found — run make backfill first"; \
 	fi
-	@echo "API on http://127.0.0.1:$(API_PORT) · agent $(AGENT_MODEL) · Ctrl-C stops"
+	@if [ ! -x apps/web/node_modules/.bin/next ]; then \
+		echo "warn: apps/web deps missing — run: (cd apps/web && npm ci)"; \
+	fi
+	@if [ ! -x .venv/bin/uvicorn ]; then \
+		echo "err: .venv/bin/uvicorn missing — run: uv sync"; exit 1; \
+	fi
+	@echo "API on http://127.0.0.1:$(API_PORT) · web on http://localhost:$(WEB_PORT) · agent $(AGENT_MODEL) · Ctrl-C stops both"
 	@AGENT_MODEL="$(AGENT_MODEL)" AGENT_BASE_URL="$(AGENT_BASE_URL)" \
-		uv run uvicorn inversa.api.app:create_app --factory --port $(API_PORT)
+		exec .venv/bin/uvicorn inversa.api.app:create_app --factory --port $(API_PORT) & \
+	UVICORN_PID=$$!; \
+	( cd apps/web && NEXT_PUBLIC_API_URL="$${NEXT_PUBLIC_API_URL:-http://127.0.0.1:$(API_PORT)}" \
+		exec ./node_modules/.bin/next dev --port $(WEB_PORT) ) & \
+	WEB_PID=$$!; \
+	trap 'kill $$WEB_PID $$UVICORN_PID 2>/dev/null || true' EXIT INT TERM; \
+	wait $$UVICORN_PID
 
 ask: ## Stream one agent answer — make ask MESSAGE="..." (RAW=1 for raw SSE)
 	@if [ -z "$$MESSAGE" ]; then \
