@@ -3,6 +3,10 @@ AGENT_BASE_URL ?= http://localhost:11434/v1
 API_PORT ?= 8000
 WEB_PORT ?= 3000
 RAW ?= 0
+PROJECT_ID ?= inversa-home-challenge
+REGION ?= northamerica-northeast1
+WIF_POOL ?= github
+WIF_PROVIDER_ID ?= github-actions
 
 ifeq ($(RAW),1)
 ASK_SINK := cat
@@ -14,12 +18,12 @@ export MESSAGE
 
 .DEFAULT_GOAL := help
 
-.PHONY: help bootstrap proto lint typecheck test backfill verify serve ask
+.PHONY: help bootstrap proto lint typecheck test backfill verify serve ask infra-fmt infra-init infra-plan infra-apply infra-bootstrap infra-gh-config infra-gh-secrets
 
 ##@ General
 
 help: ## Show available targets and configurable variables
-	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m [API_PORT=8000] [WEB_PORT=3000] [MESSAGE=...] [AGENT_MODEL=openai:...] [AGENT_BASE_URL=...]\n"} \
+	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m [API_PORT=8000] [WEB_PORT=3000] [MESSAGE=...] [AGENT_MODEL=openai:...] [AGENT_BASE_URL=...] [PROJECT_ID=...] [REGION=...]\n"} \
 		/^[a-zA-Z0-9_-]+:.*##/ { printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2 } \
 		/^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
@@ -118,7 +122,7 @@ infra-fmt: ## terraform fmt-check + validate infra/ (no GCP access needed)
 	terraform -chdir=infra fmt -check
 	terraform -chdir=infra validate
 
-infra-init: ## terraform init infra/ against the GCS backend (needs infra/bootstrap.sh first)
+infra-init: ## terraform init infra/ against the GCS backend (needs make infra-bootstrap first)
 	terraform -chdir=infra init -input=false
 
 infra-plan: ## terraform plan infra/ (pass TF_ARGS="-var firms_map_key=...")
@@ -126,3 +130,24 @@ infra-plan: ## terraform plan infra/ (pass TF_ARGS="-var firms_map_key=...")
 
 infra-apply: ## terraform apply infra/ (pass TF_ARGS="-var firms_map_key=..."; review plan first)
 	terraform -chdir=infra apply -input=false -auto-approve $(TF_ARGS)
+
+infra-bootstrap: ## One-time GCP setup: APIs, tfstate bucket, AR repo, WIF pool, deployer SA (run as Owner; needs billing)
+	PROJECT_ID=$(PROJECT_ID) REGION=$(REGION) bash infra/bootstrap.sh
+
+infra-gh-config: ## Set GCP_WIF_PROVIDER + GCP_DEPLOY_SA gh variables from the live project (needs make infra-bootstrap)
+	provider_name=$$(gcloud iam workload-identity-pools providers describe $(WIF_PROVIDER_ID) \
+		--location=global --workload-identity-pool=$(WIF_POOL) --format='value(name)') || \
+		{ echo "err: failed to resolve WIF provider name (run make infra-bootstrap first)"; exit 1; }; \
+	gh variable set GCP_WIF_PROVIDER --body "$$provider_name"
+	gh variable set GCP_DEPLOY_SA --body 'inversa-deployer@$(PROJECT_ID).iam.gserviceaccount.com'
+
+infra-gh-secrets: ## Push FIRMS_MAP_KEY / OPENAQ_API_KEY / AGENT_API_KEY from env to gh secrets (empty env = skipped)
+	for key in FIRMS_MAP_KEY OPENAQ_API_KEY AGENT_API_KEY; do \
+		val="$$(printenv $$key)"; \
+		if [ -n "$$val" ]; then \
+			printf '%s' "$$val" | gh secret set "$$key" || exit 1; \
+			echo "set $$key"; \
+		else \
+			echo "skipped $$key (empty in env)"; \
+		fi; \
+	done
