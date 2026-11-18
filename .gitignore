@@ -22,3 +22,9 @@ next-env.d.ts
 .vscode/
 *.swp
 .DS_Store
+
+# terraform
+.terraform/
+infra/.terraform/
+infra/tfplan
+*.auto.tfvars
