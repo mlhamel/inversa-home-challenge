@@ -78,6 +78,22 @@ for role in \
   echo "granted"
 done
 
+step "allow WIF pool to impersonate $DEPLOY_SA_EMAIL"
+PROJECT_NUMBER="$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')"
+EXPECTED_MEMBER="principalSet://iam.googleapis.com/projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/$POOL_ID/attribute.repository/$GITHUB_REPO"
+POLICY_MEMBERS="$(gcloud iam service-accounts get-iam-policy "$DEPLOY_SA_EMAIL" \
+  --project="$PROJECT_ID" --format='value(bindings.members)')"
+if grep -qxF -- "$EXPECTED_MEMBER" <<< "$POLICY_MEMBERS"; then
+  echo "already granted, skipping"
+else
+  gcloud iam service-accounts add-iam-policy-binding "$DEPLOY_SA_EMAIL" \
+    --project="$PROJECT_ID" \
+    --role="roles/iam.workloadIdentityUser" \
+    --member="$EXPECTED_MEMBER" \
+    --quiet >/dev/null
+  echo "granted"
+fi
+
 PROVIDER_NAME="$(gcloud iam workload-identity-pools providers describe "$PROVIDER_ID" \
   --location=global --workload-identity-pool="$POOL_ID" --format='value(name)')"
 
