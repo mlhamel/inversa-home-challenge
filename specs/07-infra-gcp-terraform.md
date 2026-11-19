@@ -17,7 +17,7 @@ depends_on: [spec-02-ingestion-pipelines, spec-05-fastapi-agent-gateway]
   - **`nextjs` container** (port `3000` via `PORT`): the React map/timeline/chat UI, whose same-origin `/api/*` proxy now reaches the IAM-only `web_api`; `src/middleware.ts` attaches a `web_sa` ID token (audience = runtime env `API_AUDIENCE`, deliberately not the build-inlined `NEXT_PUBLIC_API_URL`) fetched from the instance metadata server, failing open when no metadata server exists (local `make serve`).
   - Both secrets ride Secret Manager volume mounts (`web-ui-htpasswd` apr1 hash, `web-ui-nginx-conf` server block), read by `web_sa`.
 - **`google_cloud_run_v2_job.ingestion_job`:**
-  - Executes `python -m inversa.ingestion.backfill` with `FIRMS_MAP_KEY`, `OPENAQ_API_KEY`, and `BBOX` environment variables.
+  - Executes `python -m inversa.ingestion.backfill` with `FIRMS_MAP_KEY`, `OPENAQ_API_KEY`, and the study-area variables (`REGION_*`, falling back to `BBOX`) as defined in spec-02 section 1.
 - **`google_cloud_scheduler_job.trigger_ingestion`:**
   - Triggers `ingestion_job` every 2 hours (`0 */2 * * *`).
 
