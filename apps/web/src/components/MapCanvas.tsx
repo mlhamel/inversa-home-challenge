@@ -50,7 +50,7 @@ interface MapCanvasProps {
 
 interface TooltipDatum extends Partial<SnapshotFireRow>, Partial<SnapshotStationRow> {}
 
-function buildIconAtlas(): string | null {
+function buildIconAtlas(): HTMLCanvasElement | null {
   const canvas = document.createElement("canvas");
   canvas.width = ICON_SIZE * 2;
   canvas.height = ICON_SIZE;
@@ -80,11 +80,7 @@ function buildIconAtlas(): string | null {
   ctx.arc(ICON_SIZE / 2, ICON_SIZE / 2, ICON_SIZE / 2 - 7, 0, Math.PI * 2);
   ctx.stroke();
   ctx.restore();
-  try {
-    return canvas.toDataURL("image/png");
-  } catch {
-    return null;
-  }
+  return canvas;
 }
 
 function escapeHtml(text: string): string {
@@ -108,7 +104,7 @@ export default function MapCanvas({
   const overlayRef = useRef<MapboxOverlay | null>(null);
   const movedRef = useRef(false);
   const autoFitDoneRef = useRef(false);
-  const [atlas, setAtlas] = useState<string | null>(null);
+  const [atlas, setAtlas] = useState<HTMLCanvasElement | null>(null);
   const [pulsePhase, setPulsePhase] = useState(0);
 
   useEffect(() => {
@@ -209,7 +205,7 @@ export default function MapCanvas({
             id: "flagged-stations",
             data: flagged,
             pickable: true,
-            iconAtlas: atlas,
+            iconAtlas: atlas as unknown as string,
             iconMapping: {
               [RING_KEY]: {
                 x: ICON_SIZE,
@@ -237,7 +233,7 @@ export default function MapCanvas({
         id: "wind-vectors",
         data: wind,
         visible: atlas !== null,
-        iconAtlas: atlas ?? undefined,
+        iconAtlas: (atlas ?? undefined) as unknown as string,
         iconMapping: {
           [ARROW_KEY]: {
             x: 0,
