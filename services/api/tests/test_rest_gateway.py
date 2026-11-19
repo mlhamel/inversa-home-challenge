@@ -4,12 +4,15 @@ from __future__ import annotations
 
 import statistics
 import time
-from collections.abc import Iterator
+from collections.abc import AsyncIterator, Iterator
 from typing import Any
 
 import pytest
-from inversa.api.app import create_app
+from fastapi import FastAPI, Response
+from fastapi.responses import StreamingResponse
+from inversa.api.app import _StreamingSafeGzip, create_app
 from inversa.api.config import Settings
+from inversa.api.rest import CACHE_CONTROL
 from starlette.testclient import TestClient
 
 TIMELINE_START: str = "2026-11-17T12:00:00Z"
@@ -31,12 +34,6 @@ def gateway(api_settings: Settings) -> Iterator[TestClient]:
     app = create_app(api_settings)
     with TestClient(app) as client:
         yield client
-
-
-def _json(response: Any) -> Any:
-    """Assert OK and decode the JSON body."""
-    assert response.status_code == 200
-    return response.json()
 
 
 def test_timeline_summary_returns_hourly_aggregates(gateway: TestClient) -> None:
@@ -83,3 +80,73 @@ def test_snapshot_returns_all_three_layers(gateway: TestClient) -> None:
     assert set(wind) == {"WX-HOME", "WX-DOWN"}
     assert wind["WX-HOME"]["boundary_layer_height"] == 600.0
     assert wind["WX-DOWN"]["wind_speed_10m"] == 15.0
+
+
+def test_state_endpoints_revalidate_with_etags(gateway: TestClient) -> None:
+    """Scrubbing replays of the same instant revalidate to cheap 304s (spec-05)."""
+    for path, params in (
+        ("/api/snapshot", {"timestamp": SNAPSHOT_TS}),
+        ("/api/timeline/summary", {"start": TIMELINE_START, "end": TIMELINE_END}),
+    ):
+        response = gateway.get(path, params=params)
+        assert response.status_code == 200
+        assert response.headers["cache-control"] == CACHE_CONTROL
+        assert "Accept-Encoding" in _vary_members(response)
+        etag = response.headers["etag"]
+        assert etag.startswith('"') and etag.endswith('"')
+
+        cases = (
+            etag,
+            f"W/{etag}",
+            "*",
+            f'"stale-tag", {etag}',
+        )
+        for if_none_match in cases:
+            revalidated = gateway.get(path, params=params, headers={"If-None-Match": if_none_match})
+            assert revalidated.status_code == 304
+            assert revalidated.headers["etag"] == etag
+            assert revalidated.content == b""
+            assert "Accept-Encoding" in _vary_members(revalidated)
+
+        mismatch = gateway.get(path, params=params, headers={"If-None-Match": '"stale-tag"'})
+        assert mismatch.status_code == 200
+        assert mismatch.headers["etag"] == etag
+
+
+def test_gzip_compresses_state_responses_but_not_chat_stream() -> None:
+    """Large JSON travels compressed; the SSE stream must bypass the gzip window."""
+    app = FastAPI()
+    app.add_middleware(_StreamingSafeGzip)
+
+    @app.get("/api/snapshot")
+    def snapshot() -> Response:
+        return Response(content=b'{"fires": []}' + b"x" * 2048, media_type="application/json")
+
+    @app.post("/api/chat")
+    async def chat() -> StreamingResponse:
+        async def stream() -> AsyncIterator[str]:
+            yield "data: hello\n\n"
+
+        return StreamingResponse(stream(), media_type="text/event-stream")
+
+    with TestClient(app) as client:
+        compressed = client.get("/api/snapshot")
+        assert compressed.status_code == 200
+        assert compressed.headers["content-encoding"] == "gzip"
+        assert compressed.content == b'{"fires": []}' + b"x" * 2048
+
+        stream = client.post("/api/chat")
+        assert stream.status_code == 200
+        assert "content-encoding" not in stream.headers
+        assert stream.text.startswith("data: hello")
+
+
+def _json(response: Any) -> Any:
+    """Assert OK and decode the JSON body."""
+    assert response.status_code == 200
+    return response.json()
+
+
+def _vary_members(response: Any) -> set[str]:
+    """Split the Vary header value into its member tokens."""
+    return {member.strip() for member in response.headers["vary"].split(",")}
