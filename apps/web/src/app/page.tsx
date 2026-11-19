@@ -13,6 +13,14 @@ import {
   parseEvidence,
   type EvidenceRefs,
 } from "../lib/evidence";
+import {
+  PREFETCH_CONCURRENCY,
+  PREFETCH_HOURS,
+  PREFETCH_PAUSE_MS,
+  PREFETCH_PUMP_MS,
+  planPrefetchHours,
+} from "../lib/prefetch";
+import { createSnapshotStore } from "../lib/snapshot-store";
 import { parseSseStream } from "../lib/sse";
 import type { Snapshot, TimelineRow } from "../lib/types";
 
@@ -37,10 +45,29 @@ export default function Page() {
   const requestedHourRef = useRef<string | null>(null);
   const snapshotCache = useRef(new Map<string, Snapshot>());
   const inFlightSnapshots = useRef(new Map<string, Promise<Snapshot>>());
+  const snapshotStore = useMemo(() => createSnapshotStore(), []);
 
   useEffect(() => {
     playingRef.current = playing;
   }, [playing]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void snapshotStore
+      .load(Date.now())
+      .then((stored) => {
+        if (cancelled) return;
+        for (const [hour, storedSnapshot] of stored) {
+          if (!snapshotCache.current.has(hour)) {
+            snapshotCache.current.set(hour, storedSnapshot);
+          }
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [snapshotStore]);
 
   useEffect(() => {
     const end = new Date();
@@ -56,17 +83,28 @@ export default function Page() {
       );
   }, []);
 
-  const ensureSnapshot = useCallback((hour: string) => {
-    if (snapshotCache.current.has(hour) || inFlightSnapshots.current.has(hour)) return;
-    const promise = fetchSnapshot(hour)
-      .then((data) => {
-        snapshotCache.current.set(hour, data);
-        return data;
-      })
-      .finally(() => inFlightSnapshots.current.delete(hour));
-    void promise.catch(() => undefined);
-    inFlightSnapshots.current.set(hour, promise);
-  }, []);
+  const cacheAndPersist = useCallback(
+    (hour: string, data: Snapshot) => {
+      snapshotCache.current.set(hour, data);
+      void snapshotStore.save(hour, data, Date.now());
+    },
+    [snapshotStore],
+  );
+
+  const ensureSnapshot = useCallback(
+    (hour: string) => {
+      if (snapshotCache.current.has(hour) || inFlightSnapshots.current.has(hour)) return;
+      const promise = fetchSnapshot(hour)
+        .then((data) => {
+          cacheAndPersist(hour, data);
+          return data;
+        })
+        .finally(() => inFlightSnapshots.current.delete(hour));
+      void promise.catch(() => undefined);
+      inFlightSnapshots.current.set(hour, promise);
+    },
+    [cacheAndPersist],
+  );
 
   useEffect(() => {
     if (selectedHour === null) {
@@ -77,6 +115,9 @@ export default function Page() {
     const cached = snapshotCache.current.get(selectedHour);
     if (cached) {
       setSnapshot(cached);
+      setSnapshotError(null);
+    } else {
+      setSnapshot(null);
       setSnapshotError(null);
     }
     const paint = (data: Snapshot) => {
@@ -98,7 +139,7 @@ export default function Page() {
     const timer = window.setTimeout(() => {
       fetchSnapshot(selectedHour, controller.signal)
         .then((data) => {
-          snapshotCache.current.set(selectedHour, data);
+          cacheAndPersist(selectedHour, data);
           paint(data);
         })
         .catch(report);
@@ -107,7 +148,7 @@ export default function Page() {
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [selectedHour]);
+  }, [selectedHour, cacheAndPersist]);
 
   useEffect(() => {
     if (rows.length === 0 || selectedHour === null) return;
@@ -117,6 +158,37 @@ export default function Page() {
       if (hour !== undefined) ensureSnapshot(hour);
     }
   }, [rows, selectedHour, ensureSnapshot]);
+
+  useEffect(() => {
+    if (rows.length === 0) return;
+    const plan = planPrefetchHours(
+      rows.map((row) => row.hour_bucket),
+      PREFETCH_HOURS,
+    );
+    let cursor = 0;
+    let timer: number | undefined;
+    const pump = () => {
+      if (cursor >= plan.length) return;
+      if (!playingRef.current) {
+        while (
+          cursor < plan.length &&
+          inFlightSnapshots.current.size < PREFETCH_CONCURRENCY
+        ) {
+          ensureSnapshot(plan[cursor]);
+          cursor += 1;
+        }
+      }
+      if (cursor >= plan.length) return;
+      timer = window.setTimeout(
+        pump,
+        playingRef.current ? PREFETCH_PAUSE_MS : PREFETCH_PUMP_MS,
+      );
+    };
+    pump();
+    return () => {
+      if (timer !== undefined) window.clearTimeout(timer);
+    };
+  }, [rows, ensureSnapshot]);
 
   const highlightedFireIds = useMemo(
     () => new Set(evidence?.fireIds ?? []),
