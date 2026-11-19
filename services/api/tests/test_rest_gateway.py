@@ -14,7 +14,7 @@ from fastapi import FastAPI, Response
 from fastapi.responses import StreamingResponse
 from inversa.api import rest as api_rest
 from inversa.api.app import _StreamingSafeGzip, create_app
-from inversa.api.config import Settings
+from inversa.api.config import Region, Settings
 from inversa.api.db.queries import Snapshot, TimelineRow, run_snapshot, run_timeline_summary
 from inversa.api.rest import CACHE_CONTROL
 from starlette.testclient import TestClient
@@ -72,10 +72,11 @@ def test_timeline_summary_serves_preaggregated_buckets_under_50ms(
     assert statistics.median(timings) < 0.050
 
 
-def test_snapshot_returns_all_three_layers(gateway: TestClient) -> None:
-    """The map layers at one instant are fires, stations, and wind (spec-05 section 1)."""
+def test_snapshot_returns_layers_and_regions(gateway: TestClient) -> None:
+    """The map layers at one instant are fires, stations, wind, and regions (spec-05 § 1)."""
     snap = _json(gateway.get("/api/snapshot", params={"timestamp": SNAPSHOT_TS}))
-    assert set(snap) == {"fires", "stations", "wind"}
+    assert set(snap) == {"fires", "stations", "wind", "regions"}
+    assert snap["regions"] == []
 
     fires = snap["fires"]
     assert {row["fire_id"] for row in fires} == {"FIRE-1", "FIRE-2"}
@@ -89,6 +90,20 @@ def test_snapshot_returns_all_three_layers(gateway: TestClient) -> None:
     assert set(wind) == {"WX-HOME", "WX-DOWN"}
     assert wind["WX-HOME"]["boundary_layer_height"] == 600.0
     assert wind["WX-DOWN"]["wind_speed_10m"] == 15.0
+
+
+def test_snapshot_exposes_configured_region_rects(api_settings: Settings) -> None:
+    """Env-configured study areas ride along so the map can outline every bbox."""
+    regions = (
+        Region(id="california", label="California", bbox=(-124.4, 36.0, -115.4, 42.0)),
+    )
+    app = create_app(api_settings.model_copy(update={"regions": regions}))
+    with TestClient(app) as client:
+        snap = _json(client.get("/api/snapshot", params={"timestamp": SNAPSHOT_TS}))
+
+    assert snap["regions"] == [
+        {"id": "california", "label": "California", "bbox": [-124.4, 36.0, -115.4, 42.0]}
+    ]
 
 
 def test_state_endpoints_revalidate_with_etags(gateway: TestClient) -> None:
