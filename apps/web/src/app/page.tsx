@@ -34,6 +34,9 @@ export default function Page() {
   const [chatOpen, setChatOpen] = useState(false);
   const nextMessageId = useRef(1);
   const playingRef = useRef(false);
+  const requestedHourRef = useRef<string | null>(null);
+  const snapshotCache = useRef(new Map<string, Snapshot>());
+  const inFlightSnapshots = useRef(new Map<string, Promise<Snapshot>>());
 
   useEffect(() => {
     playingRef.current = playing;
@@ -53,28 +56,67 @@ export default function Page() {
       );
   }, []);
 
+  const ensureSnapshot = useCallback((hour: string) => {
+    if (snapshotCache.current.has(hour) || inFlightSnapshots.current.has(hour)) return;
+    const promise = fetchSnapshot(hour)
+      .then((data) => {
+        snapshotCache.current.set(hour, data);
+        return data;
+      })
+      .finally(() => inFlightSnapshots.current.delete(hour));
+    void promise.catch(() => undefined);
+    inFlightSnapshots.current.set(hour, promise);
+  }, []);
+
   useEffect(() => {
     if (selectedHour === null) {
       setSnapshot(null);
+      return;
+    }
+    requestedHourRef.current = selectedHour;
+    const cached = snapshotCache.current.get(selectedHour);
+    if (cached) {
+      setSnapshot(cached);
+      setSnapshotError(null);
+    }
+    const paint = (data: Snapshot) => {
+      if (requestedHourRef.current !== selectedHour) return;
+      setSnapshot(data);
+      setSnapshotError(null);
+    };
+    const report = (err: unknown) => {
+      if (err instanceof DOMException && err.name === "AbortError") return;
+      if (requestedHourRef.current !== selectedHour) return;
+      setSnapshotError(err instanceof Error ? err.message : "snapshot failed");
+    };
+    const inflight = inFlightSnapshots.current.get(selectedHour);
+    if (inflight) {
+      inflight.then(paint).catch(report);
       return;
     }
     const controller = new AbortController();
     const timer = window.setTimeout(() => {
       fetchSnapshot(selectedHour, controller.signal)
         .then((data) => {
-          setSnapshot(data);
-          setSnapshotError(null);
+          snapshotCache.current.set(selectedHour, data);
+          paint(data);
         })
-        .catch((err: unknown) => {
-          if (err instanceof DOMException && err.name === "AbortError") return;
-          setSnapshotError(err instanceof Error ? err.message : "snapshot failed");
-        });
+        .catch(report);
     }, SNAPSHOT_DEBOUNCE_MS);
     return () => {
       window.clearTimeout(timer);
       controller.abort();
     };
   }, [selectedHour]);
+
+  useEffect(() => {
+    if (rows.length === 0 || selectedHour === null) return;
+    const idx = rows.findIndex((row) => row.hour_bucket === selectedHour);
+    if (idx < 0) return;
+    for (const hour of [rows[idx - 1]?.hour_bucket, rows[idx + 1]?.hour_bucket]) {
+      if (hour !== undefined) ensureSnapshot(hour);
+    }
+  }, [rows, selectedHour, ensureSnapshot]);
 
   const highlightedFireIds = useMemo(
     () => new Set(evidence?.fireIds ?? []),
