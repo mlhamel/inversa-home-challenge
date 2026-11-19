@@ -96,18 +96,45 @@ gh secret set FIRMS_MAP_KEY      --body '<NASA FIRMS MAP_KEY>'
 gh secret set OPENAQ_API_KEY     --body '<OpenAQ API key>'
 gh secret set AGENT_API_KEY      --body '<LLM API key>'
 gh variable set AGENT_MODEL      --body 'openai:gpt-4o-mini'   # optional override
+gh secret set WEB_UI_HTPASSWD    --body 'demo:<apr1 hash>'     # optional demo password
 ```
 
+`WEB_UI_HTPASSWD` is optional: without it the demo uses the built-in throwaway
+credential (user `demo`, password `inversa-demo-2026`). To rotate it, generate
+a new line with `openssl passwd -apr1 '<new-password>'` and prefix it with
+`demo:`.
+
 `infra/` provisions: `web-api` (FastAPI + FastMCP + DuckDB, 2 vCPU/2 GiB, GCS FUSE
-`/mnt/data` read-only, public invoker), `web-ui` (Next.js, proxies same-origin
-`/api/*` → `web-api`, preserving the zero-CORS design), `ingestion-job` (GCS FUSE
+`/mnt/data` read-only, **IAM-only** — invoker restricted to `web_sa`), `web-ui`
+(nginx basic-auth sidecar on port 8080 in front of Next.js on port 3000;
+it proxies same-origin `/api/*` → `web-api`, and its middleware attaches a
+`web_sa` identity token so the UI keeps working behind the IAM wall,
+preserving the zero-CORS design directly to `web-api`), `ingestion-job` (GCS FUSE
 read-write, writes ZSTD Parquet), the `${PROJECT_ID}-datalake` bucket with a 30-day
 lifecycle rule, the `0 */2 * * *` scheduler, and Secret Manager entries for the optional
 API keys (created only when the matching GitHub secret is non-empty; Cloud Run
-reads them via `value_source`, never plain env vars). Idle cost is ≈ $0 —
+reads them via `value_source`, never plain env vars; the nginx `.htpasswd` /
+conf ride Secret Manager volume mounts). Idle cost is ≈ $0 —
 `min-instances` 0 and no static IP. Local Terraform equivalent: `make infra-init`
 / `infra-plan` / `infra-apply` (pass secrets with
 `TF_ARGS="-var firms_map_key=..."`).
+
+Accessing the deployed demo:
+
+- **Map / timeline / chat UI:** share the `web_ui_url` Terraform output plus the
+  `demo` password — the URL is public, the basic-auth prompt is the gate.
+- **Direct `web-api` calls** (scripts, graders, load tests): fetch a
+  `web_sa`-flavored identity token and send it as a Bearer header:
+
+  ```bash
+  curl -H "Authorization: Bearer $(gcloud auth print-identity-token)" \
+       "$(terraform -chdir=infra output web_api_url)/health"
+  ```
+
+  (Your account needs `roles/run.invoker` on `web-api`; the agent's in-process
+  MCP client needs nothing external.)
+- Local `make serve` is unchanged — no auth, and the middleware fails open
+  without a metadata server.
 
 ## Documentation
 
