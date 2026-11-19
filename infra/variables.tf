@@ -12,7 +12,7 @@ variable "region" {
 
 variable "bbox" {
   type        = string
-  description = "Ingestion bounding box 'min_lon,min_lat,max_lon,max_lat'."
+  description = "Study area 'min_lon,min_lat,max_lon,max_lat' fed as REGION_CALIFORNIA to the ingestion and API services."
   default     = "-124.4,36.0,-115.4,42.0"
 }
 
