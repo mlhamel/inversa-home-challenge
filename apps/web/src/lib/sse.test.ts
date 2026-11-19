@@ -19,10 +19,11 @@ async function collect(body: string): Promise<ChatStreamEvent[]> {
 describe("parseSseStream", () => {
   it("parses framed events in order", async () => {
     const events = await collect(
-      'event: token\ndata: {"text":"hi"}\n\nevent: evidence\ndata: {"fireIds":["f1"]}\n\n',
+      'event: token\ndata: {"text":"hi"}\n\nevent: thinking\ndata: {"text":"hmm"}\n\nevent: evidence\ndata: {"fireIds":["f1"]}\n\n',
     );
     expect(events).toEqual([
       { event: "token", data: { text: "hi" } },
+      { event: "thinking", data: { text: "hmm" } },
       { event: "evidence", data: { fireIds: ["f1"] } },
     ]);
   });

@@ -8,6 +8,7 @@ export interface ChatMessageData {
   id: number;
   role: "user" | "assistant";
   text: string;
+  thinking?: string;
   tools: string[];
   evidence: EvidenceRefs | null;
   error: string | null;
@@ -110,6 +111,11 @@ export default function ChatDrawer({
               key={message.id}
               className="mr-8 max-w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm"
             >
+              {message.thinking !== undefined && message.thinking.trim() !== "" ? (
+                <p className="mb-2 whitespace-pre-wrap border-l border-white/10 pl-2 text-xs italic text-white/40">
+                  {message.thinking}
+                </p>
+              ) : null}
               {message.text === "" && streaming && message.error === null ? (
                 <span className="text-white/50">…</span>
               ) : (

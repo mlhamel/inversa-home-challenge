@@ -1,4 +1,9 @@
-export type ChatStreamEventName = "tool_call" | "evidence" | "token" | "error";
+export type ChatStreamEventName =
+  | "tool_call"
+  | "thinking"
+  | "evidence"
+  | "token"
+  | "error";
 
 export interface ChatStreamEvent {
   event: ChatStreamEventName;
@@ -47,6 +52,7 @@ function parseSseFrame(frame: string): ChatStreamEvent | null {
   if (event === "" || data === "") return null;
   const names: readonly ChatStreamEventName[] = [
     "tool_call",
+    "thinking",
     "evidence",
     "token",
     "error",

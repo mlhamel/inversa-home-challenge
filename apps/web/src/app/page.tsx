@@ -241,6 +241,7 @@ export default function Page() {
         id: botId,
         role: "assistant",
         text: "",
+        thinking: "",
         tools: [],
         evidence: null,
         error: null,
@@ -259,6 +260,9 @@ export default function Page() {
           if (event.event === "token") {
             const token = typeof event.data.text === "string" ? event.data.text : "";
             update((m) => ({ ...m, text: m.text + token }));
+          } else if (event.event === "thinking") {
+            const delta = typeof event.data.text === "string" ? event.data.text : "";
+            update((m) => ({ ...m, thinking: (m.thinking ?? "") + delta }));
           } else if (event.event === "tool_call") {
             const tool =
               typeof event.data.tool === "string" ? event.data.tool : "unknown tool";
