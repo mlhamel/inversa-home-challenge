@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import maplibregl, { Map as MapLibre } from "maplibre-gl";
 import { MapboxOverlay } from "@deck.gl/mapbox";
-import { IconLayer, ScatterplotLayer } from "@deck.gl/layers";
+import { GeoJsonLayer, IconLayer, ScatterplotLayer } from "@deck.gl/layers";
 import type { PickingInfo } from "@deck.gl/core";
 import {
   clamp,
@@ -13,10 +13,15 @@ import {
   FIRE_OUTLINE_COLOR,
   OUTLIER_RING_COLOR,
   pm25DeckColor,
+  REGION_FILL_ALPHA,
+  REGION_OUTLINE_ALPHA,
+  regionDeckColor,
   STALE_RING_COLOR,
   STATION_OUTLINE_COLOR,
   WIND_COLOR,
 } from "../lib/theme";
+import { regionFeatures } from "../lib/regions";
+import type { RegionProperties } from "../lib/regions";
 import type {
   Snapshot,
   SnapshotFireRow,
@@ -268,6 +273,16 @@ export default function MapCanvas({
             },
           });
     return [
+      new GeoJsonLayer<RegionProperties>({
+        id: "region-rects",
+        data: regionFeatures(snapshot?.regions),
+        pickable: false,
+        stroked: true,
+        filled: true,
+        lineWidthMinPixels: 1,
+        getLineColor: (f) => regionDeckColor(f.properties.hueIndex, REGION_OUTLINE_ALPHA),
+        getFillColor: (f) => regionDeckColor(f.properties.hueIndex, REGION_FILL_ALPHA),
+      }),
       ...(windLayer ? [windLayer] : []),
       new ScatterplotLayer<SnapshotFireRow>({
         id: "fires",
