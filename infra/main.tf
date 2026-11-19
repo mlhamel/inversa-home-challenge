@@ -112,6 +112,11 @@ resource "google_cloud_run_v2_service" "web_api" {
       }
 
       env {
+        name  = "REGION_CALIFORNIA"
+        value = var.bbox
+      }
+
+      env {
         name  = "AGENT_MODEL"
         value = var.agent_model
       }
