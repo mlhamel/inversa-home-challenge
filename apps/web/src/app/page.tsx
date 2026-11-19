@@ -5,6 +5,7 @@ import ChatDrawer, { type ChatMessageData } from "../components/ChatDrawer";
 import EvidenceInspector from "../components/EvidenceInspector";
 import MapCanvas, { type MapPadding } from "../components/MapCanvas";
 import MapLegend from "../components/MapLegend";
+import MapStatusOverlay from "../components/MapStatusOverlay";
 import TimelineDock from "../components/TimelineDock";
 import { fetchSnapshot, fetchTimelineSummary } from "../lib/api";
 import {
@@ -13,6 +14,7 @@ import {
   parseEvidence,
   type EvidenceRefs,
 } from "../lib/evidence";
+import { deriveMapStatus } from "../lib/map-status";
 import {
   PREFETCH_CONCURRENCY,
   PREFETCH_HOURS,
@@ -290,6 +292,13 @@ export default function Page() {
     [streaming],
   );
 
+  const mapStatus = deriveMapStatus({
+    rowsError,
+    selectedHour,
+    snapshot,
+    snapshotError,
+  });
+
   return (
     <main className="relative h-dvh w-full overflow-hidden">
       <MapCanvas
@@ -340,6 +349,8 @@ export default function Page() {
         onSubmit={handleChatSubmit}
         onEvidenceChip={(refs) => setInspectorEvidence(refs)}
       />
+
+      <MapStatusOverlay status={mapStatus} />
 
       {snapshotError === null ? null : (
         <p className="absolute bottom-[200px] left-1/2 z-20 -translate-x-1/2 rounded panel border px-3 py-1 text-xs text-red-300">
