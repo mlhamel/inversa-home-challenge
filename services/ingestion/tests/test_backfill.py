@@ -42,20 +42,30 @@ async def test_backfill_records_all_three_sources(
     )
 
     statuses = await run_backfill(settings, run_at=run_at)
-    assert statuses == {"nasa_firms": "success", "openaq": "success", "open_meteo": "success"}
+    assert statuses == {
+        "nasa_firms:default": "success",
+        "openaq:default": "success",
+        "open_meteo:default": "success",
+    }
 
     root = settings.data_dir
-    fires = pl.read_parquet(root / "fires" / "date=2026-11-14" / "fires_1800.parquet")
+    fires = pl.read_parquet(root / "fires" / "date=2026-11-14" / "fires_default_1800.parquet")
     assert fires.height == 2
-    air = pl.read_parquet(root / "air_quality" / "date=2026-11-17" / "openaq_1800.parquet")
+    assert fires["region"].unique().to_list() == ["default"]
+    air = pl.read_parquet(
+        root / "air_quality" / "date=2026-11-17" / "openaq_default_1800.parquet"
+    )
     assert air["pm25"].item() == pytest.approx(8.5)
     assert air["quality_flag"].item() == "valid"
-    weather = pl.read_parquet(root / "weather" / "date=2026-11-17" / "meteo_1800.parquet")
+    weather = pl.read_parquet(
+        root / "weather" / "date=2026-11-17" / "meteo_default_1800.parquet"
+    )
     assert weather.height == 4
 
     log = _log(root)
     assert log["known_latency_minutes"].to_list() == [180, 15, 0]
     assert log["status"].to_list() == ["success", "success", "success"]
+    assert log["region"].unique().to_list() == ["default"]
 
 
 async def test_backfill_flags_partial_when_firms_rejects(
@@ -71,12 +81,18 @@ async def test_backfill_flags_partial_when_firms_rejects(
     )
 
     statuses = await run_backfill(settings, run_at=run_at)
-    assert statuses == {"nasa_firms": "partial", "openaq": "success", "open_meteo": "success"}
+    assert statuses == {
+        "nasa_firms:default": "partial",
+        "openaq:default": "success",
+        "open_meteo:default": "success",
+    }
 
     log = _log(settings.data_dir)
     assert log["status"].to_list() == ["partial", "success", "success"]
     assert log["records_written"].to_list()[0] == 1
-    fires = pl.read_parquet(settings.data_dir / "fires" / "date=2026-11-14" / "fires_1800.parquet")
+    fires = pl.read_parquet(
+        settings.data_dir / "fires" / "date=2026-11-14" / "fires_default_1800.parquet"
+    )
     assert fires.height == 1
     assert fires["confidence"].unique().to_list() == ["high"]
 
@@ -94,7 +110,11 @@ async def test_backfill_logs_failure_when_openaq_fails(
     )
 
     statuses = await run_backfill(settings, run_at=run_at)
-    assert statuses == {"nasa_firms": "success", "openaq": "failed", "open_meteo": "success"}
+    assert statuses == {
+        "nasa_firms:default": "success",
+        "openaq:default": "failed",
+        "open_meteo:default": "success",
+    }
 
     root = settings.data_dir
     log = _log(root)
@@ -120,25 +140,33 @@ async def test_backfill_emits_info_flow_lines(
     with caplog.at_level(logging.INFO):
         statuses = await run_backfill(settings, run_at=run_at)
 
-    assert statuses == {"nasa_firms": "success", "openaq": "success", "open_meteo": "success"}
+    assert statuses == {
+        "nasa_firms:default": "success",
+        "openaq:default": "success",
+        "open_meteo:default": "success",
+    }
     messages = [record.message for record in caplog.records]
     starts = [message for message in messages if message.startswith("backfill start:")]
     assert len(starts) == 1
-    assert f"BBOX={TEST_BBOX}" in starts[0]
+    assert f"regions=default={TEST_BBOX}" in starts[0]
     assert "window=2026-11-10..2026-11-17" in starts[0]
     assert f"dir={settings.data_dir}" in starts[0]
     assert "nasa_firms: range 4d: 0 fires, 0 rejected" in messages
     assert "nasa_firms: range 5d: 2 fires, 0 rejected" in messages
-    assert "openaq: 1 stations in BBOX" in messages
+    assert "openaq/default: 1 stations in bbox" in messages
     station_lines = [message for message in messages if message.startswith("openaq: station 2009:")]
     assert station_lines == ["openaq: station 2009: 1 rows, 0 rejected"]
     assert any(message.startswith("open_meteo: ") for message in messages)
     assert any(
-        message.startswith("open_meteo: 4 rows, 0 rejected, ") for message in messages
+        message.startswith("open_meteo: 4 rows across 1 regions, 0 rejected, ")
+        for message in messages
     )
     summaries = [message for message in messages if message.startswith("backfill complete:")]
     assert len(summaries) == 1
-    assert "nasa_firms=success openaq=success open_meteo=success" in summaries[0]
+    assert (
+        "nasa_firms:default=success openaq:default=success open_meteo:default=success"
+        in summaries[0]
+    )
     assert "wall " in summaries[0] and summaries[0].endswith(")")
 
 
@@ -159,11 +187,11 @@ async def test_backfill_logs_source_failure(
     with caplog.at_level(logging.INFO):
         statuses = await run_backfill(settings, run_at=run_at)
 
-    assert statuses["openaq"] == "failed"
+    assert statuses["openaq:default"] == "failed"
     messages = [record.message for record in caplog.records]
-    assert "storage: openaq: run failed, recorded in ingestion log" in messages
+    assert "storage: openaq/default: run failed, recorded in ingestion log" in messages
     summaries = [message for message in messages if message.startswith("backfill complete:")]
-    assert "openaq=failed" in summaries[0]
+    assert "openaq:default=failed" in summaries[0]
 
 
 def _handler(

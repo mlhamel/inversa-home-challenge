@@ -82,11 +82,12 @@ async def collect(
     settings: Settings,
     *,
     ingested_at: datetime,
+    bbox: str,
     pacer: Pacer | None = None,
 ) -> CollectorResult:
     """Fetch latest PM2.5 readings for every bbox station with bounded concurrency."""
     stations = await collect_stations(
-        client, api_key=settings.openaq_api_key, bbox=settings.bbox_str, pacer=pacer
+        client, api_key=settings.openaq_api_key, bbox=bbox, pacer=pacer
     )
     if not stations:
         return _readings([], 0)

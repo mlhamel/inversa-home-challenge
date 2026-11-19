@@ -13,6 +13,7 @@ from inversa.ingestion.contract import DATETIME
 LOG_SCHEMA: Final[pl.Schema] = pl.Schema(
     {
         "source": pl.String(),
+        "region": pl.String(),
         "run_at": DATETIME,
         "latest_data_ts": DATETIME,
         "known_latency_minutes": pl.Int32(),
@@ -43,46 +44,60 @@ def record_batch(
     *,
     root: Path,
     source: str,
+    region: str,
     run_at: datetime,
     rejected: int = 0,
 ) -> list[Path]:
     """Write date-partitioned Parquet and append the run log; return written paths."""
     spec = SOURCE_SPECS[source]
+    tagged = df.with_columns(region=pl.lit(region, dtype=pl.String))
     paths: list[Path] = []
-    if df.height:
+    if tagged.height:
         suffix = run_at.strftime("%H%M")
-        sliced = df.with_columns(_partition=pl.col("observed_at").dt.strftime("%Y-%m-%d"))
+        sliced = tagged.with_columns(_partition=pl.col("observed_at").dt.strftime("%Y-%m-%d"))
         for date in sliced["_partition"].unique().sort():
-            part = sliced.filter(pl.col("_partition") == date).select(df.columns)
+            part = sliced.filter(pl.col("_partition") == date).select(tagged.columns)
             directory = root / spec.folder / f"date={date}"
             directory.mkdir(parents=True, exist_ok=True)
-            path = directory / f"{spec.prefix}_{suffix}.parquet"
+            path = directory / f"{spec.prefix}_{region}_{suffix}.parquet"
             part.write_parquet(path, compression="zstd")
             paths.append(path)
-    observed_max = df["observed_at"].max() if df.height else None
+    observed_max = tagged["observed_at"].max() if tagged.height else None
     latest = observed_max if isinstance(observed_max, datetime) else None
     status = "partial" if rejected else "success"
-    _append_log(root, source=source, run_at=run_at, records=df.height, latest=latest, status=status)
+    _append_log(
+        root,
+        source=source,
+        region=region,
+        run_at=run_at,
+        records=tagged.height,
+        latest=latest,
+        status=status,
+    )
     logger.info(
-        "storage: %s: %d rows in %d file(s), status=%s",
+        "storage: %s/%s: %d rows in %d file(s), status=%s",
         source,
-        df.height,
+        region,
+        tagged.height,
         len(paths),
         status,
     )
     return paths
 
 
-def record_failure(root: Path, *, source: str, run_at: datetime) -> None:
+def record_failure(root: Path, *, source: str, region: str, run_at: datetime) -> None:
     """Append a failed-run log entry with zero records."""
-    _append_log(root, source=source, run_at=run_at, records=0, latest=None, status="failed")
-    logger.warning("storage: %s: run failed, recorded in ingestion log", source)
+    _append_log(
+        root, source=source, region=region, run_at=run_at, records=0, latest=None, status="failed"
+    )
+    logger.warning("storage: %s/%s: run failed, recorded in ingestion log", source, region)
 
 
 def _append_log(
     root: Path,
     *,
     source: str,
+    region: str,
     run_at: datetime,
     records: int,
     latest: datetime | None,
@@ -91,6 +106,7 @@ def _append_log(
     row = pl.DataFrame(
         {
             "source": [source],
+            "region": [region],
             "run_at": [run_at],
             "latest_data_ts": [latest],
             "known_latency_minutes": [SOURCE_SPECS[source].latency_minutes],
@@ -100,6 +116,9 @@ def _append_log(
         schema=LOG_SCHEMA,
     )
     path = root / "meta" / "ingestion_log.parquet"
-    table = row if not path.exists() else pl.read_parquet(path).vstack(row)
+    if path.exists():
+        table = pl.concat([pl.read_parquet(path), row], how="diagonal")
+    else:
+        table = row
     path.parent.mkdir(parents=True, exist_ok=True)
     table.write_parquet(path, compression="zstd")

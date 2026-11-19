@@ -1,7 +1,7 @@
 ---
 id: spec-01-data-contracts
 title: Canonical Protobuf Contracts, Buf Codegen, and Parquet Storage
-version: 2.0.0
+version: 2.1.0
 depends_on: [spec-00-context]
 ---
 
@@ -147,15 +147,18 @@ Managed via `buf` (`buf generate` invoked via `make proto`):
 All validated Protobuf entities are persisted as ZSTD-compressed Apache Parquet files in `gs://${GCS_BUCKET_NAME}/` partitioned by source and UTC date:
 
     gs://${GCS_BUCKET_NAME}/
-    ├── fires/date=YYYY-MM-DD/fires_HHMM.parquet
-    ├── air_quality/date=YYYY-MM-DD/openaq_HHMM.parquet
-    ├── weather/date=YYYY-MM-DD/meteo_HHMM.parquet
+    ├── fires/date=YYYY-MM-DD/fires_<region>_<HHMM>.parquet
+    ├── air_quality/date=YYYY-MM-DD/openaq_<region>_<HHMM>.parquet
+    ├── weather/date=YYYY-MM-DD/meteo_<region>_<HHMM>.parquet
     └── meta/ingestion_log.parquet
+
+`<region>` is the lowercased id of the study area sourced from the `REGION_*` environment contract (spec-02 section 1), so batches from different regions never collide on a filename; legacy pre-region files keep their `fires_HHMM.parquet` shape and read back with a NULL `region` column.
 
 ## 3.1 Protobuf-to-Parquet Mapping Rules
 - **Timestamps:** `google.protobuf.Timestamp` maps to Polars `Datetime('us', 'UTC')`.
 - **Enums:** `FireConfidence` and `QualityFlag` are stored as lowercase string literals (`'high'`, `'nominal'`, `'low'`; `'valid'`, `'outlier'`, `'stale'`) in Parquet so DuckDB SQL queries remain human-readable, and are hydrated back into Protobuf enums when building API responses.
 - **`fire_id` Rule:** Deterministic 16-char SHA-256 hash of `f"{lat:.4f}_{lon:.4f}_{observed_at_iso}"`.
+- **Region Scoping:** every fire, air-quality, weather, and ingestion-log row carries a `region` string column with the id of the study area it was collected for (spec-02 section 1); the DuckDB engine unions it away as NULL for legacy files.
 - **`measurement_id` Rule:** `f"{station_id}_{observed_at_iso}"`.
 - **`quality_flag` Rules (OpenAQ):**
   1. If `pm25 < 0.0` or `pm25 > 1500.0`: `QUALITY_FLAG_OUTLIER` (`'outlier'`) and `pm25 = null`.

@@ -116,7 +116,7 @@ def test_missing_source_tables_boot_as_empty_stubs(tmp_path: Path) -> None:
         ],
         schema=AIR_QUALITY_SCHEMA,
     )
-    record_batch(air_only, root=tmp_path, source="openaq", run_at=RUN_AT)
+    record_batch(air_only, root=tmp_path, source="openaq", region="default", run_at=RUN_AT)
     close_engine()
     initialize_engine(Settings(data_dir=tmp_path))
     cursor = open_cursor()

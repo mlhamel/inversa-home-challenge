@@ -12,29 +12,38 @@ from samples import FIRMS_HEADER, FIRMS_ROW_A, FIRMS_ROW_D, RUN_AT
 
 
 def test_record_batch_writes_partitioned_parquet(tmp_path: Path, run_at: datetime) -> None:
-    paths = record_batch(_fires_frame(), root=tmp_path, source="nasa_firms", run_at=run_at)
+    paths = record_batch(
+        _fires_frame(), root=tmp_path, source="nasa_firms", region="default", run_at=run_at
+    )
 
-    expected = tmp_path / "fires" / "date=2026-11-14" / "fires_1800.parquet"
+    expected = tmp_path / "fires" / "date=2026-11-14" / "fires_default_1800.parquet"
     assert paths == [expected]
     back = pl.read_parquet(expected)
     assert back.height == 2
-    assert back.schema == FIRES_SCHEMA
+    assert back["region"].unique().to_list() == ["default"]
+    assert back.select(FIRES_SCHEMA.names()).schema == FIRES_SCHEMA
 
 
 def test_record_batch_splits_partitions_by_observed_date(tmp_path: Path, run_at: datetime) -> None:
-    paths = record_batch(_air_frame(), root=tmp_path, source="openaq", run_at=run_at)
+    paths = record_batch(
+        _air_frame(), root=tmp_path, source="openaq", region="default", run_at=run_at
+    )
 
     assert [path.relative_to(tmp_path).as_posix() for path in paths] == [
-        "air_quality/date=2026-11-16/openaq_1800.parquet",
-        "air_quality/date=2026-11-17/openaq_1800.parquet",
+        "air_quality/date=2026-11-16/openaq_default_1800.parquet",
+        "air_quality/date=2026-11-17/openaq_default_1800.parquet",
     ]
     for path in paths:
         assert pl.read_parquet(path).height == 1
 
 
 def test_record_batch_appends_ingestion_log(tmp_path: Path, run_at: datetime) -> None:
-    record_batch(_fires_frame(), root=tmp_path, source="nasa_firms", run_at=run_at)
-    record_batch(_fires_frame(), root=tmp_path, source="nasa_firms", run_at=run_at)
+    record_batch(
+        _fires_frame(), root=tmp_path, source="nasa_firms", region="default", run_at=run_at
+    )
+    record_batch(
+        _fires_frame(), root=tmp_path, source="nasa_firms", region="default", run_at=run_at
+    )
 
     log = pl.read_parquet(tmp_path / "meta" / "ingestion_log.parquet")
     assert log.schema == LOG_SCHEMA
@@ -49,18 +58,24 @@ def test_record_batch_appends_ingestion_log(tmp_path: Path, run_at: datetime) ->
 
 
 def test_record_batch_flags_partial_on_rejected(tmp_path: Path, run_at: datetime) -> None:
-    record_batch(_fires_frame(), root=tmp_path, source="nasa_firms", run_at=run_at, rejected=1)
+    record_batch(
+        _fires_frame(), root=tmp_path, source="nasa_firms", region="default", run_at=run_at,
+        rejected=1,
+    )
 
     log = pl.read_parquet(tmp_path / "meta" / "ingestion_log.parquet")
     assert log["status"].item() == "partial"
     assert log["records_written"].item() == 2
+    assert log["region"].item() == "default"
 
 
 def test_record_batch_empty_frame_writes_no_files_but_logs(
     tmp_path: Path, run_at: datetime
 ) -> None:
     schema_frame = fetch_firms.collect_sync(FIRMS_HEADER, ingested_at=RUN_AT).df
-    paths = record_batch(schema_frame, root=tmp_path, source="nasa_firms", run_at=run_at)
+    paths = record_batch(
+        schema_frame, root=tmp_path, source="nasa_firms", region="default", run_at=run_at
+    )
 
     assert paths == []
     assert not (tmp_path / "fires").exists()
@@ -72,11 +87,12 @@ def test_record_batch_empty_frame_writes_no_files_but_logs(
 
 
 def test_record_failure_logs_failed_row(tmp_path: Path, run_at: datetime) -> None:
-    record_failure(tmp_path, source="open_meteo", run_at=run_at)
+    record_failure(tmp_path, source="open_meteo", region="default", run_at=run_at)
 
     log = pl.read_parquet(tmp_path / "meta" / "ingestion_log.parquet")
     row = log.row(0, named=True)
     assert row["source"] == "open_meteo"
+    assert row["region"] == "default"
     assert row["status"] == "failed"
     assert row["records_written"] == 0
     assert row["known_latency_minutes"] == 0

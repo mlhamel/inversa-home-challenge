@@ -22,6 +22,16 @@ class BoundingBox(_message.Message):
     max_lat: float
     def __init__(self, min_lon: _Optional[float] = ..., min_lat: _Optional[float] = ..., max_lon: _Optional[float] = ..., max_lat: _Optional[float] = ...) -> None: ...
 
+class Region(_message.Message):
+    __slots__ = ("id", "label", "bbox")
+    ID_FIELD_NUMBER: _ClassVar[int]
+    LABEL_FIELD_NUMBER: _ClassVar[int]
+    BBOX_FIELD_NUMBER: _ClassVar[int]
+    id: str
+    label: str
+    bbox: BoundingBox
+    def __init__(self, id: _Optional[str] = ..., label: _Optional[str] = ..., bbox: _Optional[_Union[BoundingBox, _Mapping]] = ...) -> None: ...
+
 class EvidenceRefs(_message.Message):
     __slots__ = ("fire_ids", "station_ids", "focus_timestamp", "bbox_focus")
     FIRE_IDS_FIELD_NUMBER: _ClassVar[int]
@@ -87,13 +97,15 @@ class TimelineBucket(_message.Message):
     def __init__(self, hour_bucket: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., active_fires_count: _Optional[int] = ..., avg_pm25: _Optional[float] = ..., max_pm25: _Optional[float] = ..., active_stations: _Optional[int] = ..., stale_stations: _Optional[int] = ...) -> None: ...
 
 class MapSnapshot(_message.Message):
-    __slots__ = ("timestamp", "fires", "stations", "wind_vectors")
+    __slots__ = ("timestamp", "fires", "stations", "wind_vectors", "regions")
     TIMESTAMP_FIELD_NUMBER: _ClassVar[int]
     FIRES_FIELD_NUMBER: _ClassVar[int]
     STATIONS_FIELD_NUMBER: _ClassVar[int]
     WIND_VECTORS_FIELD_NUMBER: _ClassVar[int]
+    REGIONS_FIELD_NUMBER: _ClassVar[int]
     timestamp: _timestamp_pb2.Timestamp
     fires: _containers.RepeatedCompositeFieldContainer[_telemetry_pb2.FireDetection]
     stations: _containers.RepeatedCompositeFieldContainer[_telemetry_pb2.AirQualityReading]
     wind_vectors: _containers.RepeatedCompositeFieldContainer[_telemetry_pb2.WindVector]
-    def __init__(self, timestamp: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., fires: _Optional[_Iterable[_Union[_telemetry_pb2.FireDetection, _Mapping]]] = ..., stations: _Optional[_Iterable[_Union[_telemetry_pb2.AirQualityReading, _Mapping]]] = ..., wind_vectors: _Optional[_Iterable[_Union[_telemetry_pb2.WindVector, _Mapping]]] = ...) -> None: ...
+    regions: _containers.RepeatedCompositeFieldContainer[Region]
+    def __init__(self, timestamp: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., fires: _Optional[_Iterable[_Union[_telemetry_pb2.FireDetection, _Mapping]]] = ..., stations: _Optional[_Iterable[_Union[_telemetry_pb2.AirQualityReading, _Mapping]]] = ..., wind_vectors: _Optional[_Iterable[_Union[_telemetry_pb2.WindVector, _Mapping]]] = ..., regions: _Optional[_Iterable[_Union[Region, _Mapping]]] = ...) -> None: ...

@@ -293,7 +293,7 @@ resource "google_cloud_run_v2_job" "ingestion" {
         }
 
         env {
-          name  = "BBOX"
+          name  = "REGION_CALIFORNIA"
           value = var.bbox
         }
 

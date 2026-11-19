@@ -168,9 +168,9 @@ def _write_scene(root: Path) -> None:
         ],
         schema=WEATHER_SCHEMA,
     )
-    record_batch(fires, root=root, source="nasa_firms", run_at=RUN_AT)
-    record_batch(air_quality, root=root, source="openaq", run_at=RUN_AT)
-    record_batch(weather, root=root, source="open_meteo", run_at=RUN_AT)
+    record_batch(fires, root=root, source="nasa_firms", region="default", run_at=RUN_AT)
+    record_batch(air_quality, root=root, source="openaq", region="default", run_at=RUN_AT)
+    record_batch(weather, root=root, source="open_meteo", region="default", run_at=RUN_AT)
 
 
 @pytest.fixture
