@@ -13,6 +13,7 @@ class Settings(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     data_dir: Path
+    state_cache_ttl_ms: int = 120_000
     agent_model: str = "openai:gpt-4o-mini"
     agent_base_url: str | None = None
     agent_api_key: str | None = None
@@ -24,6 +25,7 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
     raw = source.get("DATA_DIR") or "./.local_datalake"
     return Settings(
         data_dir=Path(raw),
+        state_cache_ttl_ms=int(source.get("STATE_CACHE_TTL_MS") or "120000"),
         agent_model=source.get("AGENT_MODEL") or "openai:gpt-4o-mini",
         agent_base_url=source.get("AGENT_BASE_URL") or None,
         agent_api_key=source.get("AGENT_API_KEY") or None,

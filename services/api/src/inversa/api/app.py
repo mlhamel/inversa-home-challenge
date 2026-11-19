@@ -10,6 +10,7 @@ from inversa.api.chat import chat_router
 from inversa.api.config import Settings, load_settings
 from inversa.api.db.engine import close_engine, initialize_engine
 from inversa.api.mcp.server import build_mcp
+from inversa.api.rest import _StateCache
 from inversa.api.rest import router as rest_router
 from pydantic import BaseModel, ConfigDict
 from starlette.middleware.gzip import GZipMiddleware
@@ -49,6 +50,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             close_engine()
 
     app = FastAPI(title="Inversa Geo Explorer API", version=APP_VERSION, lifespan=lifespan)
+    app.state.state_cache = _StateCache(resolved.state_cache_ttl_ms)
     app.add_middleware(_StreamingSafeGzip)
     app.include_router(rest_router)
     app.include_router(chat_router(mcp, resolved))
