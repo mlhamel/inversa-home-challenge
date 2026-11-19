@@ -1,12 +1,13 @@
 ---
 id: spec-06-frontend-timeline-map
 title: Next.js Web Interface, Interactive Map, and Timeline
-version: 1.0.0
+version: 1.1.0
 depends_on: [spec-05-fastapi-agent-gateway]
 ---
 
 # 1. Layout & Core Components
 - **Full-Screen Geospatial Canvas (`MapLibre GL JS` + `Deck.gl`):**
+  - **Layer 0 (`GeoJsonLayer` study-area rects):** every configured study area from `snapshot.regions` renders as a whisper-tinted bbox outline beneath the data layers — thin (~1px) per-region hue at ~45% outline alpha with a ~7% whisper fill — never competing with amber fire or station colors.
   - **Layer 1 (`ScatterplotLayer` / `HeatmapLayer`):** NASA FIRMS active fires sized by `frp` (radiative power).
   - **Layer 2 (`ScatterplotLayer` / `IconLayer`):** OpenAQ stations colored by PM2.5 AQI scale; stations with `quality_flag == 'stale'` rendered in muted gray with a dashed outline and staleness tooltip warning.
   - **Layer 3 (`IconLayer` directional arrows):** Open-Meteo wind vectors rotated by `wind_direction_10m` and scaled by `wind_speed_10m`.

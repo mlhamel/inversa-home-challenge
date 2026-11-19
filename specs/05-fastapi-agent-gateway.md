@@ -1,7 +1,7 @@
 ---
 id: spec-05-fastapi-agent-gateway
 title: FastAPI Gateway, SSE Streaming, and Agent Orchestration
-version: 1.0.0
+version: 1.1.0
 depends_on: [spec-03-duckdb-spatial-engine, spec-04-mcp-server-spec]
 ---
 
@@ -9,7 +9,7 @@ depends_on: [spec-03-duckdb-spatial-engine, spec-04-mcp-server-spec]
 - **`GET /api/timeline/summary?start={iso}&end={iso}`**
   - Returns a lightweight JSON array of hourly aggregates (`hour_bucket`, `active_fires_count`, `avg_pm25`, `max_pm25`, `active_stations`, `stale_stations`) in < 50ms for smooth 60fps client-side timeline scrubbing.
 - **`GET /api/snapshot?timestamp={iso}`**
-  - Returns the exact map state at `timestamp`: active FIRMS fires over the trailing 4 hours, all OpenAQ stations with `quality_flag`, and wind vector grid points from Open-Meteo.
+  - Returns the exact map state at `timestamp`: active FIRMS fires over the trailing 4 hours, all OpenAQ stations with `quality_flag`, and wind vector grid points from Open-Meteo, plus `regions` — the configured study areas (`id`, `label`, `bbox`) parsed from the `REGION_*` environment contract (spec-02 section 1) — so the map can outline every area even where no data flows.
 
 # 2. Conversational Endpoint (`POST /api/chat`)
 - **Protocol:** Server-Sent Events (`text/event-stream`).

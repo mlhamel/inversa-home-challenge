@@ -1,12 +1,12 @@
 ---
 id: spec-02-ingestion-pipelines
 title: Polars Ingestion Pipelines and Backfill Script
-version: 2.0.0
+version: 2.1.0
 depends_on: [spec-01-data-contracts]
 ---
 
 # 1. Configurable Geographic Bounding Box
-All ingestion collectors use an environment variable `BBOX` formatted as `min_lon,min_lat,max_lon,max_lat` to bound data volume and ensure fast query performance.
+Ingestion collectors are bounded by environment variables that keep data volume low and query performance fast. One or more study areas are declared as `REGION_<NAME>` variables formatted as `min_lon,min_lat,max_lon,max_lat`; the lowercased `<NAME>` becomes the region id and an optional `REGION_<NAME>_LABEL` overrides its display label (>label defaults to the id). Every FIRMS and OpenAQ collection runs once per region; rows carry their `region` id, and Parquet batches are named `<source>/date=YYYY-MM-DD/<source>_<region>_<HHMM>.parquet`. `ingestion_log` rows gain the same `region` column, and run statuses are keyed `"<source>:<region_id>"`. The legacy `BBOX` variable remains supported as a single region with id `default`; any `REGION_*` variable takes precedence.
 
 # 2. Validation & Serialization Flow
 Each collector follows a strict three-step boundary pipeline:
@@ -39,7 +39,7 @@ Each collector follows a strict three-step boundary pipeline:
 - **Spatial Sampling Logic:**
   1. Extract unique coordinates from OpenAQ stations and active fire cluster centroids (rounded to `0.25` degrees).
   2. Query `wind_speed_10m`, `wind_direction_10m`, and `boundary_layer_height` in UTC.
-  3. Write Parquet batch to `weather/date=YYYY-MM-DD/`.
+  3. Write Parquet batch to `weather/date=YYYY-MM-DD/`. To stay rate-limit friendly the forecast is queried once over the union grid across all regions; each grid row is attributed to the nearest region bbox and tagged with its `region`.
 
 # 4. Historical Backfill Script (`services/ingestion/src/ingestion/backfill.py`)
 - **Purpose:** Populate the trailing 7 days (`T-7d` to `T0`) immediately upon initial deployment so the interactive timeline has rich history on first load.
