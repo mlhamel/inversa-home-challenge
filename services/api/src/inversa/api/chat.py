@@ -20,6 +20,8 @@ from pydantic_ai.messages import (
     PartStartEvent,
     TextPart,
     TextPartDelta,
+    ThinkingPart,
+    ThinkingPartDelta,
 )
 
 SSE_MEDIA_TYPE: Final[str] = "text/event-stream"
@@ -34,7 +36,7 @@ class ChatRequest(BaseModel):
 
 
 async def chat_events(agent: Agent[None, str], user_prompt: str) -> AsyncIterator[str]:
-    """Stream the agent run as tool_call, evidence, and token SSE events."""
+    """Stream the agent run as tool_call, thinking, evidence, and token SSE events."""
     try:
         async with agent.iter(user_prompt) as run:
             async for node in run:
@@ -54,10 +56,19 @@ async def chat_events(agent: Agent[None, str], user_prompt: str) -> AsyncIterato
                     async with node.stream(run.ctx) as text_stream:
                         async for event in text_stream:
                             if isinstance(event, PartStartEvent):
-                                if isinstance(event.part, TextPart) and event.part.content:
+                                if isinstance(event.part, ThinkingPart) and event.part.content:
+                                    yield _sse("thinking", {"text": event.part.content})
+                                elif isinstance(event.part, TextPart) and event.part.content:
                                     yield _sse("token", {"text": event.part.content})
                             elif isinstance(event, PartDeltaEvent):
                                 if (
+                                    isinstance(event.delta, ThinkingPartDelta)
+                                    and event.delta.content_delta
+                                ):
+                                    yield _sse(
+                                        "thinking", {"text": event.delta.content_delta}
+                                    )
+                                elif (
                                     isinstance(event.delta, TextPartDelta)
                                     and event.delta.content_delta
                                 ):
