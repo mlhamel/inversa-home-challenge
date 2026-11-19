@@ -222,6 +222,7 @@ export default function MapCanvas({
               },
             },
             getIcon: () => RING_KEY,
+            getPosition: (d) => [d.lon, d.lat],
             sizeUnits: "pixels",
             getSize: 26,
             getColor: (d) =>
@@ -249,6 +250,7 @@ export default function MapCanvas({
           },
         },
         getIcon: () => ARROW_KEY,
+        getPosition: (d) => [d.lon, d.lat],
         sizeUnits: "pixels",
         getSize: (d) =>
           clamp(
