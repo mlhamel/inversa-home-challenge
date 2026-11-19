@@ -103,7 +103,9 @@ async def test_collect_latest_matches_pm25_sensor_entry(settings: Settings, run_
     async with httpx.AsyncClient(
         transport=httpx.MockTransport(_json_handler([], routes))
     ) as client:
-        result = await fetch_openaq.collect(client, settings, ingested_at=run_at)
+        result = await fetch_openaq.collect(
+            client, settings, ingested_at=run_at, bbox=TEST_BBOX
+        )
 
     assert result.df.height == 1
     assert result.df.schema == AIR_QUALITY_SCHEMA
@@ -123,7 +125,9 @@ async def test_collect_latest_preserves_missing_value_as_stale(
     async with httpx.AsyncClient(
         transport=httpx.MockTransport(_json_handler([], routes))
     ) as client:
-        result = await fetch_openaq.collect(client, settings, ingested_at=run_at)
+        result = await fetch_openaq.collect(
+            client, settings, ingested_at=run_at, bbox=TEST_BBOX
+        )
 
     assert result.df.height == 1
     row = result.df.row(0, named=True)
@@ -140,7 +144,9 @@ async def test_collect_latest_without_stations_yields_empty(
     async with httpx.AsyncClient(
         transport=httpx.MockTransport(_json_handler(captured, routes))
     ) as client:
-        result = await fetch_openaq.collect(client, settings, ingested_at=run_at)
+        result = await fetch_openaq.collect(
+            client, settings, ingested_at=run_at, bbox=TEST_BBOX
+        )
 
     assert result.df.height == 0
     assert result.rejected == 0
@@ -190,7 +196,9 @@ async def test_collect_latest_rejects_entry_with_missing_utc(
     async with httpx.AsyncClient(
         transport=httpx.MockTransport(_json_handler([], routes))
     ) as client:
-        result = await fetch_openaq.collect(client, settings, ingested_at=run_at)
+        result = await fetch_openaq.collect(
+            client, settings, ingested_at=run_at, bbox=TEST_BBOX
+        )
 
     assert result.rejected == 1
     assert result.df.height == 0
@@ -206,7 +214,9 @@ async def test_collect_latest_rejects_non_dict_datetime(
     async with httpx.AsyncClient(
         transport=httpx.MockTransport(_json_handler([], routes))
     ) as client:
-        result = await fetch_openaq.collect(client, settings, ingested_at=run_at)
+        result = await fetch_openaq.collect(
+            client, settings, ingested_at=run_at, bbox=TEST_BBOX
+        )
 
     assert result.rejected == 1
     assert result.df.height == 0
@@ -224,7 +234,9 @@ async def test_collect_latest_rejects_non_numeric_value(
     async with httpx.AsyncClient(
         transport=httpx.MockTransport(_json_handler([], routes))
     ) as client:
-        result = await fetch_openaq.collect(client, settings, ingested_at=run_at)
+        result = await fetch_openaq.collect(
+            client, settings, ingested_at=run_at, bbox=TEST_BBOX
+        )
 
     assert result.rejected == 1
     assert result.df.height == 0

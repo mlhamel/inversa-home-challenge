@@ -78,7 +78,7 @@ async def test_collect_builds_recent_and_dated_window_urls(settings: Settings) -
         transport=httpx.MockTransport(_capture(captured_recent, EMPTY_FIRMS_CSV))
     ) as client:
         recent = await fetch_firms.collect(
-            client, settings, ingested_at=RUN_AT, day_range=4
+            client, settings, ingested_at=RUN_AT, bbox=TEST_BBOX, day_range=4
         )
     assert recent.df.height == 0
     assert captured_recent[0].url.path.endswith(f"/{TEST_BBOX}/4")
@@ -91,6 +91,7 @@ async def test_collect_builds_recent_and_dated_window_urls(settings: Settings) -
             client,
             settings,
             ingested_at=RUN_AT,
+            bbox=TEST_BBOX,
             day_range=5,
             end_date=date(2026, 11, 14),
         )
@@ -100,14 +101,18 @@ async def test_collect_builds_recent_and_dated_window_urls(settings: Settings) -
 async def test_collect_rejects_day_range_out_of_bounds(settings: Settings) -> None:
     async with httpx.AsyncClient(transport=httpx.MockTransport(_capture([], ""))) as client:
         with pytest.raises(CollectorError, match="day_range"):
-            await fetch_firms.collect(client, settings, ingested_at=RUN_AT, day_range=6)
+            await fetch_firms.collect(
+                client, settings, ingested_at=RUN_AT, bbox=TEST_BBOX, day_range=6
+            )
 
 
 async def test_collect_requires_map_key(tmp_path: Path) -> None:
     unkeyed = load_settings({"BBOX": TEST_BBOX, "DATA_DIR": str(tmp_path)})
     async with httpx.AsyncClient(transport=httpx.MockTransport(_capture([], ""))) as client:
         with pytest.raises(CollectorError, match="FIRMS_MAP_KEY"):
-            await fetch_firms.collect(client, unkeyed, ingested_at=RUN_AT, day_range=1)
+            await fetch_firms.collect(
+                client, unkeyed, ingested_at=RUN_AT, bbox=TEST_BBOX, day_range=1
+            )
 
 
 async def test_collect_raises_on_http_error(settings: Settings) -> None:
@@ -116,7 +121,9 @@ async def test_collect_raises_on_http_error(settings: Settings) -> None:
 
     async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
         with pytest.raises(httpx.HTTPStatusError):
-            await fetch_firms.collect(client, settings, ingested_at=RUN_AT, day_range=1)
+            await fetch_firms.collect(
+                client, settings, ingested_at=RUN_AT, bbox=TEST_BBOX, day_range=1
+            )
 
 
 def _capture(captured: list[httpx.Request], body: str) -> Callable[[httpx.Request], httpx.Response]:
