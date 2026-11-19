@@ -10,7 +10,7 @@ import { file_inversa_v1_telemetry } from "./telemetry_pb";
  * Describes the file inversa/v1/grounding.proto.
  */
 export const file_inversa_v1_grounding = /*@__PURE__*/
-  fileDesc("ChppbnZlcnNhL3YxL2dyb3VuZGluZy5wcm90bxIKaW52ZXJzYS52MSJRCgtCb3VuZGluZ0JveBIPCgdtaW5fbG9uGAEgASgBEg8KB21pbl9sYXQYAiABKAESDwoHbWF4X2xvbhgDIAEoARIPCgdtYXhfbGF0GAQgASgBIqsBCgxFdmlkZW5jZVJlZnMSEAoIZmlyZV9pZHMYASADKAkSEwoLc3RhdGlvbl9pZHMYAiADKAkSMwoPZm9jdXNfdGltZXN0YW1wGAMgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIwCgpiYm94X2ZvY3VzGAQgASgLMhcuaW52ZXJzYS52MS5Cb3VuZGluZ0JveEgAiAEBQg0KC19iYm94X2ZvY3VzIocCCg1Eb3dud2luZE1hdGNoEg8KB2ZpcmVfaWQYASABKAkSEAoIZmlyZV9mcnAYAiABKAISEgoKc3RhdGlvbl9pZBgDIAEoCRIUCgxzdGF0aW9uX25hbWUYBCABKAkSEQoEcG0yNRgFIAEoAkgAiAEBEi0KDHF1YWxpdHlfZmxhZxgGIAEoDjIXLmludmVyc2EudjEuUXVhbGl0eUZsYWcSEwoLZGlzdGFuY2Vfa20YByABKAESGQoRcGx1bWVfYmVhcmluZ19kZWcYCCABKAISFgoOd2luZF9zcGVlZF8xMG0YCSABKAISFgoOYW5nbGVfZGlmZl9kZWcYCiABKAFCBwoFX3BtMjUiowEKD01jcFRvb2xFbnZlbG9wZRIXCg9zdW1tYXJ5X2Zvcl9sbG0YASABKAkSGgoSZGF0YV9xdWFsaXR5X25vdGVzGAIgAygJEi8KDWV2aWRlbmNlX3JlZnMYAyABKAsyGC5pbnZlcnNhLnYxLkV2aWRlbmNlUmVmcxIqCgdtYXRjaGVzGAQgAygLMhkuaW52ZXJzYS52MS5Eb3dud2luZE1hdGNoItYBCg5UaW1lbGluZUJ1Y2tldBIvCgtob3VyX2J1Y2tldBgBIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASGgoSYWN0aXZlX2ZpcmVzX2NvdW50GAIgASgFEhUKCGF2Z19wbTI1GAMgASgCSACIAQESFQoIbWF4X3BtMjUYBCABKAJIAYgBARIXCg9hY3RpdmVfc3RhdGlvbnMYBSABKAUSFgoOc3RhbGVfc3RhdGlvbnMYBiABKAVCCwoJX2F2Z19wbTI1QgsKCV9tYXhfcG0yNSLFAQoLTWFwU25hcHNob3QSLQoJdGltZXN0YW1wGAEgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIoCgVmaXJlcxgCIAMoCzIZLmludmVyc2EudjEuRmlyZURldGVjdGlvbhIvCghzdGF0aW9ucxgDIAMoCzIdLmludmVyc2EudjEuQWlyUXVhbGl0eVJlYWRpbmcSLAoMd2luZF92ZWN0b3JzGAQgAygLMhYuaW52ZXJzYS52MS5XaW5kVmVjdG9yYgZwcm90bzM", [file_google_protobuf_timestamp, file_inversa_v1_telemetry]);
+  fileDesc("ChppbnZlcnNhL3YxL2dyb3VuZGluZy5wcm90bxIKaW52ZXJzYS52MSJRCgtCb3VuZGluZ0JveBIPCgdtaW5fbG9uGAEgASgBEg8KB21pbl9sYXQYAiABKAESDwoHbWF4X2xvbhgDIAEoARIPCgdtYXhfbGF0GAQgASgBIkoKBlJlZ2lvbhIKCgJpZBgBIAEoCRINCgVsYWJlbBgCIAEoCRIlCgRiYm94GAMgASgLMhcuaW52ZXJzYS52MS5Cb3VuZGluZ0JveCKrAQoMRXZpZGVuY2VSZWZzEhAKCGZpcmVfaWRzGAEgAygJEhMKC3N0YXRpb25faWRzGAIgAygJEjMKD2ZvY3VzX3RpbWVzdGFtcBgDIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASMAoKYmJveF9mb2N1cxgEIAEoCzIXLmludmVyc2EudjEuQm91bmRpbmdCb3hIAIgBAUINCgtfYmJveF9mb2N1cyKHAgoNRG93bndpbmRNYXRjaBIPCgdmaXJlX2lkGAEgASgJEhAKCGZpcmVfZnJwGAIgASgCEhIKCnN0YXRpb25faWQYAyABKAkSFAoMc3RhdGlvbl9uYW1lGAQgASgJEhEKBHBtMjUYBSABKAJIAIgBARItCgxxdWFsaXR5X2ZsYWcYBiABKA4yFy5pbnZlcnNhLnYxLlF1YWxpdHlGbGFnEhMKC2Rpc3RhbmNlX2ttGAcgASgBEhkKEXBsdW1lX2JlYXJpbmdfZGVnGAggASgCEhYKDndpbmRfc3BlZWRfMTBtGAkgASgCEhYKDmFuZ2xlX2RpZmZfZGVnGAogASgBQgcKBV9wbTI1IqMBCg9NY3BUb29sRW52ZWxvcGUSFwoPc3VtbWFyeV9mb3JfbGxtGAEgASgJEhoKEmRhdGFfcXVhbGl0eV9ub3RlcxgCIAMoCRIvCg1ldmlkZW5jZV9yZWZzGAMgASgLMhguaW52ZXJzYS52MS5FdmlkZW5jZVJlZnMSKgoHbWF0Y2hlcxgEIAMoCzIZLmludmVyc2EudjEuRG93bndpbmRNYXRjaCLWAQoOVGltZWxpbmVCdWNrZXQSLwoLaG91cl9idWNrZXQYASABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhoKEmFjdGl2ZV9maXJlc19jb3VudBgCIAEoBRIVCghhdmdfcG0yNRgDIAEoAkgAiAEBEhUKCG1heF9wbTI1GAQgASgCSAGIAQESFwoPYWN0aXZlX3N0YXRpb25zGAUgASgFEhYKDnN0YWxlX3N0YXRpb25zGAYgASgFQgsKCV9hdmdfcG0yNUILCglfbWF4X3BtMjUi6gEKC01hcFNuYXBzaG90Ei0KCXRpbWVzdGFtcBgBIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASKAoFZmlyZXMYAiADKAsyGS5pbnZlcnNhLnYxLkZpcmVEZXRlY3Rpb24SLwoIc3RhdGlvbnMYAyADKAsyHS5pbnZlcnNhLnYxLkFpclF1YWxpdHlSZWFkaW5nEiwKDHdpbmRfdmVjdG9ycxgEIAMoCzIWLmludmVyc2EudjEuV2luZFZlY3RvchIjCgdyZWdpb25zGAUgAygLMhIuaW52ZXJzYS52MS5SZWdpb25iBnByb3RvMw", [file_google_protobuf_timestamp, file_inversa_v1_telemetry]);
 
 /**
  * Describes the message inversa.v1.BoundingBox.
@@ -20,37 +20,44 @@ export const BoundingBoxSchema = /*@__PURE__*/
   messageDesc(file_inversa_v1_grounding, 0);
 
 /**
+ * Describes the message inversa.v1.Region.
+ * Use `create(RegionSchema)` to create a new message.
+ */
+export const RegionSchema = /*@__PURE__*/
+  messageDesc(file_inversa_v1_grounding, 1);
+
+/**
  * Describes the message inversa.v1.EvidenceRefs.
  * Use `create(EvidenceRefsSchema)` to create a new message.
  */
 export const EvidenceRefsSchema = /*@__PURE__*/
-  messageDesc(file_inversa_v1_grounding, 1);
+  messageDesc(file_inversa_v1_grounding, 2);
 
 /**
  * Describes the message inversa.v1.DownwindMatch.
  * Use `create(DownwindMatchSchema)` to create a new message.
  */
 export const DownwindMatchSchema = /*@__PURE__*/
-  messageDesc(file_inversa_v1_grounding, 2);
+  messageDesc(file_inversa_v1_grounding, 3);
 
 /**
  * Describes the message inversa.v1.McpToolEnvelope.
  * Use `create(McpToolEnvelopeSchema)` to create a new message.
  */
 export const McpToolEnvelopeSchema = /*@__PURE__*/
-  messageDesc(file_inversa_v1_grounding, 3);
+  messageDesc(file_inversa_v1_grounding, 4);
 
 /**
  * Describes the message inversa.v1.TimelineBucket.
  * Use `create(TimelineBucketSchema)` to create a new message.
  */
 export const TimelineBucketSchema = /*@__PURE__*/
-  messageDesc(file_inversa_v1_grounding, 4);
+  messageDesc(file_inversa_v1_grounding, 5);
 
 /**
  * Describes the message inversa.v1.MapSnapshot.
  * Use `create(MapSnapshotSchema)` to create a new message.
  */
 export const MapSnapshotSchema = /*@__PURE__*/
-  messageDesc(file_inversa_v1_grounding, 5);
+  messageDesc(file_inversa_v1_grounding, 6);
 

@@ -44,6 +44,32 @@ export declare type BoundingBox = Message<"inversa.v1.BoundingBox"> & {
 export declare const BoundingBoxSchema: GenMessage<BoundingBox>;
 
 /**
+ * @generated from message inversa.v1.Region
+ */
+export declare type Region = Message<"inversa.v1.Region"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string label = 2;
+   */
+  label: string;
+
+  /**
+   * @generated from field: inversa.v1.BoundingBox bbox = 3;
+   */
+  bbox?: BoundingBox | undefined;
+};
+
+/**
+ * Describes the message inversa.v1.Region.
+ * Use `create(RegionSchema)` to create a new message.
+ */
+export declare const RegionSchema: GenMessage<Region>;
+
+/**
  * @generated from message inversa.v1.EvidenceRefs
  */
 export declare type EvidenceRefs = Message<"inversa.v1.EvidenceRefs"> & {
@@ -230,6 +256,11 @@ export declare type MapSnapshot = Message<"inversa.v1.MapSnapshot"> & {
    * @generated from field: repeated inversa.v1.WindVector wind_vectors = 4;
    */
   windVectors: WindVector[];
+
+  /**
+   * @generated from field: repeated inversa.v1.Region regions = 5;
+   */
+  regions: Region[];
 };
 
 /**
