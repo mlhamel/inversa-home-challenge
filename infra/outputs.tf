@@ -1,10 +1,10 @@
 output "web_api_url" {
-  description = "Public URL of the FastAPI + FastMCP + DuckDB service."
+  description = "URL of the FastAPI + FastMCP + DuckDB service (IAM-only: callers need roles/run.invoker and a web_sa identity token)."
   value       = google_cloud_run_v2_service.web_api.uri
 }
 
 output "web_ui_url" {
-  description = "Public URL of the map / timeline / chat demo (shareable demo URL)."
+  description = "Shareable demo URL (basic-auth gated; password is the WEB_UI_HTPASSWD demo credential)."
   value       = google_cloud_run_v2_service.web_ui.uri
 }
 

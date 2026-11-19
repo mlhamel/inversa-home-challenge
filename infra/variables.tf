@@ -66,3 +66,10 @@ variable "ingestion_image" {
   description = "Container image for ingestion-job; empty falls back to the Artifact Registry ingestion:latest."
   default     = ""
 }
+
+variable "web_ui_htpasswd" {
+  sensitive   = true
+  type        = string
+  description = "Basic-auth line gating the demo web-ui: 'demo:<apr1 hash>' from `openssl passwd -apr1 '<password>'`. The built-in default is a throwaway public demo credential (password inversa-demo-2026); override via TF_VAR_web_ui_htpasswd for anything non-throwaway."
+  default     = "demo:$apr1$inversa0$VrmCcnUmiKkPG2KuOaybc/"
+}
