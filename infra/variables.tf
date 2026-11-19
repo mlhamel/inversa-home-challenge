@@ -16,6 +16,12 @@ variable "bbox" {
   default     = "-124.4,36.0,-115.4,42.0"
 }
 
+variable "nw_india_bbox" {
+  type        = string
+  description = "Study area 'min_lon,min_lat,max_lon,max_lat' fed as REGION_NW_INDIA to the ingestion and API services (Punjab–Haryana–Delhi NCR)."
+  default     = "74.0,28.2,77.8,31.5"
+}
+
 variable "firms_map_key" {
   type        = string
   description = "NASA FIRMS MAP_KEY for the ingestion job."
