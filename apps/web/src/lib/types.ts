@@ -37,8 +37,15 @@ export interface SnapshotWindRow {
   boundary_layer_height: number | null;
 }
 
+export interface SnapshotRegion {
+  id: string;
+  label: string;
+  bbox: [number, number, number, number];
+}
+
 export interface Snapshot {
   fires: SnapshotFireRow[];
   stations: SnapshotStationRow[];
   wind: SnapshotWindRow[];
+  regions?: SnapshotRegion[];
 }

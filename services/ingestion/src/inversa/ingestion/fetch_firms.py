@@ -80,6 +80,7 @@ async def collect(
     settings: Settings,
     *,
     ingested_at: datetime,
+    bbox: str,
     day_range: int = 1,
     end_date: date | None = None,
 ) -> CollectorResult:
@@ -87,16 +88,16 @@ async def collect(
     if settings.firms_map_key is None:
         raise CollectorError("FIRMS_MAP_KEY is not configured")
     response = await get_with_retry(
-        client, _url(settings, day_range, end_date), request_timeout=60.0
+        client, _url(settings, bbox, day_range, end_date), request_timeout=60.0
     )
     return collect_sync(response.text, ingested_at=ingested_at.astimezone(UTC))
 
 
-def _url(settings: Settings, day_range: int, end_date: date | None) -> str:
+def _url(settings: Settings, bbox: str, day_range: int, end_date: date | None) -> str:
     if not 1 <= day_range <= MAX_DAY_RANGE:
         msg = f"FIRMS day_range must be within [1..{MAX_DAY_RANGE}], got {day_range}"
         raise CollectorError(msg)
-    base = f"{BASE_URL}/{settings.firms_map_key}/VIIRS_NOAA20_NRT/{settings.bbox_str}/{day_range}"
+    base = f"{BASE_URL}/{settings.firms_map_key}/VIIRS_NOAA20_NRT/{bbox}/{day_range}"
     return f"{base}/{end_date.isoformat()}" if end_date is not None else base
 
 

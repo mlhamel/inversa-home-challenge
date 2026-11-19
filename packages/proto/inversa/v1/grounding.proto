@@ -11,6 +11,12 @@ message BoundingBox {
   double max_lat = 4;
 }
 
+message Region {
+  string id = 1;
+  string label = 2;
+  BoundingBox bbox = 3;
+}
+
 message EvidenceRefs {
   repeated string fire_ids = 1;
   repeated string station_ids = 2;
@@ -52,4 +58,5 @@ message MapSnapshot {
   repeated FireDetection fires = 2;
   repeated AirQualityReading stations = 3;
   repeated WindVector wind_vectors = 4;
+  repeated Region regions = 5;
 }

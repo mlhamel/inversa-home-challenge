@@ -25,6 +25,22 @@ export const FIRE_OUTLINE_COLOR: [number, number, number] = [255, 176, 92];
 export const STATION_OUTLINE_COLOR: [number, number, number] = [10, 14, 20];
 export const WIND_COLOR: [number, number, number] = [143, 214, 249];
 
+export const REGION_HUES: ReadonlyArray<[number, number, number]> = [
+  [64, 224, 200],
+  [186, 118, 255],
+  [128, 222, 122],
+  [255, 122, 158],
+];
+export const REGION_OUTLINE_ALPHA = 115;
+export const REGION_FILL_ALPHA = 18;
+
+export function regionDeckColor(
+  hueIndex: number,
+  alpha: number,
+): [number, number, number, number] {
+  return [...REGION_HUES[hueIndex % REGION_HUES.length], alpha];
+}
+
 export function pm25Color(pm25: number | null | undefined): string {
   if (pm25 === null || pm25 === undefined) return PM25_NO_DATA_COLOR;
   const stop = PM25_AQI_STOPS.find((entry) => pm25 <= entry.limit);

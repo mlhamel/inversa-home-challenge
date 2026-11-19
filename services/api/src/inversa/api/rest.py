@@ -14,8 +14,14 @@ from urllib.parse import urlencode
 import duckdb
 from fastapi import APIRouter, Request, Response
 from fastapi.encoders import jsonable_encoder
-from inversa.api.db.engine import open_cursor
-from inversa.api.db.queries import Snapshot, TimelineRow, run_snapshot, run_timeline_summary
+from inversa.api.db.engine import active_settings, open_cursor
+from inversa.api.db.queries import (
+    Snapshot,
+    SnapshotRegion,
+    TimelineRow,
+    run_snapshot,
+    run_timeline_summary,
+)
 from pydantic import BaseModel, ConfigDict
 
 router = APIRouter(prefix="/api", tags=["gateway"])
@@ -46,9 +52,18 @@ def snapshot(timestamp: datetime, request: Request) -> Response:
 
     def build() -> Snapshot:
         with _query_cursor() as cursor:
-            return run_snapshot(cursor, target_ts=timestamp)
+            data = run_snapshot(cursor, target_ts=timestamp)
+        return data.model_copy(update={"regions": _snapshot_regions()})
 
     return _cached_response(key, build, request)
+
+
+def _snapshot_regions() -> list[SnapshotRegion]:
+    """Expose the configured study areas so the map can outline every bbox."""
+    return [
+        SnapshotRegion(id=region.id, label=region.label, bbox=region.bbox)
+        for region in active_settings().regions
+    ]
 
 
 @contextmanager
