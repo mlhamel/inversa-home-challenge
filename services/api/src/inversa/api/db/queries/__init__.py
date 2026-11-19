@@ -131,6 +131,16 @@ class SnapshotWindRow(BaseModel):
     boundary_layer_height: float | None
 
 
+class SnapshotRegion(BaseModel):
+    """One configured study area exposed to the map as a rect outline."""
+
+    model_config = ConfigDict(frozen=True)
+
+    id: str
+    label: str
+    bbox: tuple[float, float, float, float]
+
+
 class Snapshot(BaseModel):
     """The three map layers rendered at one instant (spec-05 section 1)."""
 
@@ -139,6 +149,7 @@ class Snapshot(BaseModel):
     fires: list[SnapshotFireRow]
     stations: list[SnapshotStationRow]
     wind: list[SnapshotWindRow]
+    regions: list[SnapshotRegion] = []
 
 
 class EvidenceCoords(BaseModel):
