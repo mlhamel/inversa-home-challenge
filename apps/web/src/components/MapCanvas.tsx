@@ -228,41 +228,47 @@ export default function MapCanvas({
               getIcon: atlas,
             },
           });
+    const windLayer =
+      atlas === null
+        ? null
+        : new IconLayer<SnapshotWindRow>({
+            id: "wind-vectors",
+            data: wind,
+            iconAtlas: atlas as unknown as string,
+            iconMapping: {
+              [ARROW_KEY]: {
+                x: 0,
+                y: 0,
+                width: ICON_SIZE,
+                height: ICON_SIZE,
+                anchorX: ICON_SIZE / 2,
+                anchorY: ICON_SIZE / 2,
+                mask: true,
+              },
+            },
+            getIcon: () => ARROW_KEY,
+            getPosition: (d) => [d.lon, d.lat],
+            sizeUnits: "pixels",
+            getSize: (d) =>
+              clamp(
+                12 +
+                  (d.wind_speed_10m === null
+                    ? 0
+                    : Math.sqrt(d.wind_speed_10m) * 6),
+                12,
+                30,
+              ),
+            getAngle: (d) =>
+              (360 - (((d.wind_direction_10m ?? 0) + 180) % 360)) % 360,
+            getColor: [...WIND_COLOR, 210],
+            opacity: 0.85,
+            updateTriggers: {
+              getIcon: atlas,
+              getSize: atlas,
+            },
+          });
     return [
-      new IconLayer<SnapshotWindRow>({
-        id: "wind-vectors",
-        data: wind,
-        visible: atlas !== null,
-        iconAtlas: (atlas ?? undefined) as unknown as string,
-        iconMapping: {
-          [ARROW_KEY]: {
-            x: 0,
-            y: 0,
-            width: ICON_SIZE,
-            height: ICON_SIZE,
-            anchorX: ICON_SIZE / 2,
-            anchorY: ICON_SIZE / 2,
-            mask: true,
-          },
-        },
-        getIcon: () => ARROW_KEY,
-        getPosition: (d) => [d.lon, d.lat],
-        sizeUnits: "pixels",
-        getSize: (d) =>
-          clamp(
-            12 + (d.wind_speed_10m === null ? 0 : Math.sqrt(d.wind_speed_10m) * 6),
-            12,
-            30,
-          ),
-        getAngle: (d) =>
-          (360 - (((d.wind_direction_10m ?? 0) + 180) % 360)) % 360,
-        getColor: [...WIND_COLOR, 210],
-        opacity: 0.85,
-        updateTriggers: {
-          getIcon: atlas,
-          getSize: atlas,
-        },
-      }),
+      ...(windLayer ? [windLayer] : []),
       new ScatterplotLayer<SnapshotFireRow>({
         id: "fires",
         data: fires,
