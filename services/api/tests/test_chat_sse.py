@@ -12,7 +12,13 @@ from inversa.api.app import create_app
 from inversa.api.config import Settings
 from pydantic_ai.messages import ModelMessage
 from pydantic_ai.models import Model
-from pydantic_ai.models.function import DeltaToolCall, DeltaToolCalls, FunctionModel
+from pydantic_ai.models.function import (
+    DeltaThinkingCalls,
+    DeltaThinkingPart,
+    DeltaToolCall,
+    DeltaToolCalls,
+    FunctionModel,
+)
 from starlette.testclient import TestClient
 
 GOLDEN_PROMPTS: list[str] = [
@@ -120,3 +126,34 @@ def test_chat_streams_tool_and_evidence_events(
     assert any(data["fire_ids"] for data in evidence)
     tokens = "".join(data.get("text", "") for event, data in frames if event == "token")
     assert tokens == "Grounded analysis complete."
+
+
+def test_chat_streams_thinking_events(
+    chat: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A scripted reasoning stream surfaces thinking frames before the token answer."""
+
+    async def run_model(
+        messages: list[ModelMessage],
+        info: Any,
+    ) -> AsyncIterator[str | DeltaThinkingCalls]:
+        yield {1: DeltaThinkingPart(content="")}  # empty start part: no SSE frame
+        yield {0: DeltaThinkingPart(content="Check fresh fires and wind bearings. ")}
+        yield {0: DeltaThinkingPart(content="Then match downwind stations.")}
+        yield "Answer grounded in fresh data."
+
+    def scripted_model(settings: Settings) -> Model | str:
+        return FunctionModel(stream_function=run_model)
+
+    monkeypatch.setattr(orchestrator, "build_model", scripted_model)
+    response = chat.post("/api/chat", json={"message": "Any smoke headed my way?"})
+    assert response.status_code == 200
+    frames = _frames(response.text)
+    thinking_events = [event for event, _ in frames]
+    assert thinking_events == ["thinking", "thinking", "token"]
+    thinking = "".join(data.get("text", "") for event, data in frames if event == "thinking")
+    assert thinking == (
+        "Check fresh fires and wind bearings. Then match downwind stations."
+    )
+    tokens = "".join(data.get("text", "") for event, data in frames if event == "token")
+    assert tokens == "Answer grounded in fresh data."

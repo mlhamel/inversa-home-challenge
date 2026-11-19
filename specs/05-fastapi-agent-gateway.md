@@ -1,7 +1,7 @@
 ---
 id: spec-05-fastapi-agent-gateway
 title: FastAPI Gateway, SSE Streaming, and Agent Orchestration
-version: 1.1.0
+version: 1.2.0
 depends_on: [spec-03-duckdb-spatial-engine, spec-04-mcp-server-spec]
 ---
 
@@ -19,5 +19,6 @@ depends_on: [spec-03-duckdb-spatial-engine, spec-04-mcp-server-spec]
   - Cite exact station names, PM2.5 values, distances, wind bearings, and explicitly note stale or missing sensors.
 - **SSE Events Emitted to Frontend:**
   - `event: tool_call` -> `{"tool": "analyze_downwind_impact", "status": "running"}` (UI thinking indicator).
+  - `event: thinking` -> `{"text": "..."}` — streamed model reasoning deltas (e.g. GLM `reasoning` content), rendered as a muted light-grey block in the chat drawer.
   - `event: evidence` -> `evidence_refs` payload extracted from MCP tool output (triggers automatic timeline scrubbing and map zoom/highlight).
   - `event: token` -> Streamed Markdown text chunks of the final response.
