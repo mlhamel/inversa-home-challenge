@@ -117,6 +117,16 @@ resource "google_cloud_run_v2_service" "web_api" {
       }
 
       env {
+        name  = "REGION_NW_INDIA"
+        value = var.nw_india_bbox
+      }
+
+      env {
+        name  = "REGION_NW_INDIA_LABEL"
+        value = "Punjab–Haryana–Delhi NCR"
+      }
+
+      env {
         name  = "AGENT_MODEL"
         value = var.agent_model
       }
@@ -300,6 +310,11 @@ resource "google_cloud_run_v2_job" "ingestion" {
         env {
           name  = "REGION_CALIFORNIA"
           value = var.bbox
+        }
+
+        env {
+          name  = "REGION_NW_INDIA"
+          value = var.nw_india_bbox
         }
 
         dynamic "env" {
