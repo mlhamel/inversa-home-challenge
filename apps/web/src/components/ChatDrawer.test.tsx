@@ -81,6 +81,16 @@ describe("ChatDrawer", () => {
     expect(onEvidenceChip).toHaveBeenCalledTimes(2);
   });
 
+  it("renders assistant thinking as muted light-grey text above the answer", () => {
+    renderDrawer([assistantMessage({ thinking: "Check fires, then wind." })]);
+
+    const thinking = screen.getByText("Check fires, then wind.");
+    expect(thinking).toBeInTheDocument();
+    expect(thinking.className).toContain("text-white/40");
+    expect(thinking.className).toContain("italic");
+    expect(screen.getByText(/Downwind PM2\.5 is high/)).toBeInTheDocument();
+  });
+
   it("shows assistant tool chips and error text", () => {
     renderDrawer([assistantMessage({ tools: ["wind_summary"], error: "boom" })]);
 
