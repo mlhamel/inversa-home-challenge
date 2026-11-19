@@ -12,6 +12,8 @@ from inversa.api.db.engine import close_engine, initialize_engine
 from inversa.api.mcp.server import build_mcp
 from inversa.api.rest import router as rest_router
 from pydantic import BaseModel, ConfigDict
+from starlette.middleware.gzip import GZipMiddleware
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 APP_VERSION: str = "0.1.0"
 
@@ -47,6 +49,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             close_engine()
 
     app = FastAPI(title="Inversa Geo Explorer API", version=APP_VERSION, lifespan=lifespan)
+    app.add_middleware(_StreamingSafeGzip)
     app.include_router(rest_router)
     app.include_router(chat_router(mcp, resolved))
 
@@ -56,3 +59,22 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app.mount("/mcp", mcp_app)
     return app
+
+
+class _StreamingSafeGzip:
+    """GZip-compress responses except the chat SSE stream.
+
+    Compressing ``text/event-stream`` buffers token deltas inside the gzip
+    window and delays streaming output, so ``/api/chat`` bypasses compression
+    and everything else (37 KiB JSON snapshots included) shrinks on the wire.
+    """
+
+    def __init__(self, app: ASGIApp, minimum_size: int = 1024) -> None:
+        self._app = app
+        self._gzip = GZipMiddleware(app, minimum_size=minimum_size)
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] == "http" and str(scope.get("path", "")).startswith("/api/chat"):
+            await self._app(scope, receive, send)
+        else:
+            await self._gzip(scope, receive, send)
