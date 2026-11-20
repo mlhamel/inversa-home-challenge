@@ -1,4 +1,12 @@
-export default function MapIntro() {
+import type { SnapshotRegion } from "../lib/types";
+
+export default function MapIntro({
+  regions,
+}: {
+  regions: readonly SnapshotRegion[] | null | undefined;
+}) {
+  const labels = (regions ?? []).map((region) => region.label);
+  const count = labels.length;
   return (
     <aside
       aria-label="About the map"
@@ -6,8 +14,16 @@ export default function MapIntro() {
     >
       <p>
         Live wildfire detections (NASA FIRMS), downwind PM2.5 stations
-        (OpenAQ), and surface wind (Open-Meteo) for the selected hour — scrub
-        the timeline below, or ask the map a question.
+        (OpenAQ), and surface wind (Open-Meteo) for the selected hour.
+      </p>
+      {count > 0 ? (
+        <p className="mt-1.5">
+          {`Watching ${count} focus ${count === 1 ? "area" : "areas"} (bbox outline${count === 1 ? "" : "s"}): ${labels.join(", ")}.`}
+        </p>
+      ) : null}
+      <p className="mt-1.5">
+        Scrub the timeline below, or click 💬 Ask the map (top-right) — ask the
+        AI about what you see; it answers with data-backed evidence.
       </p>
     </aside>
   );
