@@ -322,7 +322,7 @@ export default function Page() {
           <span className="font-semibold">Inversa</span>
           <span className="text-white/60"> · wildfire → wind → air quality</span>
         </div>
-        <MapIntro />
+        <MapIntro regions={snapshot?.regions} />
         {rowsError === null ? null : (
           <div className="rounded-lg panel border px-3 py-1.5 text-xs text-red-300">
             {rowsError}
