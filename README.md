@@ -159,4 +159,3 @@ Accessing the deployed demo:
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — how the specs turned into layers: component-interaction diagram, a layer-by-layer tour anchored in real paths, and spotlights on two new-to-me technologies (DuckDB over partitioned Parquet · Pydantic AI over Ollama/GLM 5.3)
 - [`playbooks/`](playbooks/) — operational how-tos ([run a historical data backfill](playbooks/backfill.md))
 - [`AGENTS.md`](AGENTS.md) — repository constitution: hard architectural boundaries and verification loop
-- [`docs/inversa-take-home-challenge.pdf`](docs/inversa-take-home-challenge.pdf) — the original challenge brief
