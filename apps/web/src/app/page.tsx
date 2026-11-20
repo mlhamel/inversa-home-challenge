@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ChatDrawer, { type ChatMessageData } from "../components/ChatDrawer";
 import EvidenceInspector from "../components/EvidenceInspector";
 import MapCanvas, { type MapPadding } from "../components/MapCanvas";
+import MapIntro from "../components/MapIntro";
 import MapLegend from "../components/MapLegend";
 import MapStatusOverlay from "../components/MapStatusOverlay";
 import TimelineDock from "../components/TimelineDock";
@@ -321,6 +322,7 @@ export default function Page() {
           <span className="font-semibold">Inversa</span>
           <span className="text-white/60"> · wildfire → wind → air quality</span>
         </div>
+        <MapIntro regions={snapshot?.regions} />
         {rowsError === null ? null : (
           <div className="rounded-lg panel border px-3 py-1.5 text-xs text-red-300">
             {rowsError}
