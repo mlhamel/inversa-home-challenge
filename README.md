@@ -91,8 +91,9 @@ make serve                    # API on :8000 + web UI on :3000 — Ctrl-C stops 
 The deploy workflow (`.github/workflows/deploy.yml`) runs on every merge to `main`:
 it re-runs the verify gate, builds/pushes the `backend`, `ingestion`, and `frontend`
 images to Artifact Registry, applies `infra/` with Terraform via keyless Workload
-Identity Federation, then executes the `ingestion-job` once so the demo has fresh
-data. Cloud Scheduler refreshes the datalake every 2 hours (`0 */2 * * *`).
+Identity Federation. Deploys do not trigger an ingestion run — the lake refreshes
+at the next scheduled tick. Cloud Scheduler refreshes the datalake every 2 hours
+(`0 */2 * * *`).
 
 The only manual step is a one-time bootstrap — run from the repo root with an
 Owner-level account (creates the tfstate bucket, Artifact Registry repo, WIF
@@ -155,6 +156,7 @@ Accessing the deployed demo:
 ## Documentation
 
 - [`specs/`](specs/README.md) — the authoritative specifications (00: vision · 01: contracts · 02: ingestion · 03: DuckDB engine · 04: MCP · 05: API/agent · 06: frontend · 07: infra · 08: agent behavior · 09: QA/load)
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — how the specs turned into layers: component-interaction diagram, a layer-by-layer tour anchored in real paths, and spotlights on two new-to-me technologies (DuckDB over partitioned Parquet · Pydantic AI over Ollama/GLM 5.3)
 - [`playbooks/`](playbooks/) — operational how-tos ([run a historical data backfill](playbooks/backfill.md))
 - [`AGENTS.md`](AGENTS.md) — repository constitution: hard architectural boundaries and verification loop
 - [`docs/inversa-take-home-challenge.pdf`](docs/inversa-take-home-challenge.pdf) — the original challenge brief
