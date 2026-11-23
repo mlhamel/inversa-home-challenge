@@ -18,7 +18,6 @@ from pydantic import BaseModel, ConfigDict
 DEFAULT_RADIUS_KM: float = 150.0
 DEFAULT_CONE_HALF_ANGLE: float = 25.0
 DEFAULT_EVENT_LIMIT: int = 5
-SNAPSHOT_FIRE_WINDOW_HOURS: int = 4
 
 
 class AnalyzeMatch(BaseModel):
@@ -220,14 +219,13 @@ def run_timeline_summary(
     ]
 
 
-def run_snapshot(
+def run_snapshot_fires(
     cursor: duckdb.DuckDBPyConnection,
     *,
     target_ts: datetime,
-    fire_window_hours: int = SNAPSHOT_FIRE_WINDOW_HOURS,
-) -> Snapshot:
-    """Return the spec-05 map state at one instant: trailing fires, latest stations, wind."""
-    fires = [
+) -> list[SnapshotFireRow]:
+    """Return the FIRMS detections inside target_ts's trailing 4 h window (spec-05)."""
+    return [
         SnapshotFireRow(
             fire_id=row[0],
             observed_at=row[1],
@@ -239,6 +237,15 @@ def run_snapshot(
         )
         for row in _fetch(cursor, _load_sql("snapshot_fires.sql"), {"target_ts": target_ts})
     ]
+
+
+def run_snapshot(
+    cursor: duckdb.DuckDBPyConnection,
+    *,
+    target_ts: datetime,
+) -> Snapshot:
+    """Return the spec-05 map state at one instant: trailing fires, latest stations, wind."""
+    fires = run_snapshot_fires(cursor, target_ts=target_ts)
     stations = [
         SnapshotStationRow(
             station_id=row[0],

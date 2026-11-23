@@ -1,4 +1,4 @@
-"""Envelope pins for the three FastMCP tools and both spec-04 resources."""
+"""Envelope pins for the four FastMCP tools and both spec-04 resources."""
 
 from __future__ import annotations
 
@@ -169,6 +169,64 @@ T3_EMPTY: dict[str, Any] = {
     "matches": [],
     "events": [],
 }
+FIRE_DOWN: dict[str, Any] = {
+    "fire_id": "FIRE-1",
+    "observed_at": "2026-11-17T13:55:00Z",
+    "lat": 37.5,
+    "lon": -122.0,
+    "frp_mw": 55.0,
+    "confidence": "nominal",
+    "satellite": "VIIRS-375",
+}
+FIRE_SIDE: dict[str, Any] = {
+    **FIRE_DOWN,
+    "fire_id": "FIRE-2",
+    "observed_at": "2026-11-17T13:50:00Z",
+    "lat": 37.1,
+    "lon": -121.9,
+    "frp_mw": 80.0,
+    "confidence": "low",
+}
+T4_HIT: dict[str, Any] = {
+    "summary_for_llm": (
+        "2 active fire detection(s) in the trailing 4 h window at 2026-11-17T14:00:00Z: "
+        "leader FIRE-2 at (37.1000, -121.9000) with FRP 80.0 MW, observed 2026-11-17T13:50:00Z."
+    ),
+    "data_quality_notes": [FIRMS_LATENCY_NOTE],
+    "evidence_refs": {
+        "fire_ids": ["FIRE-1", "FIRE-2"],
+        "station_ids": [],
+        "focus_timestamp": TS,
+        "bbox_focus": [-122.0, 37.1, -121.9, 37.5],
+    },
+    "matches": [],
+    "fires": [FIRE_DOWN, FIRE_SIDE],
+}
+T4_EMPTY: dict[str, Any] = {
+    "summary_for_llm": (
+        f"No active fires at {EARLY_END} in the trailing 4 h window."
+    ),
+    "data_quality_notes": [
+        FIRMS_LATENCY_NOTE,
+        "No FIRMS active-fire detections in the trailing 4 h snapshot window at this timestamp.",
+    ],
+    "evidence_refs": {"focus_timestamp": EARLY_END, "fire_ids": [], "station_ids": []},
+    "matches": [],
+}
+T4_REGION: dict[str, Any] = {
+    **T4_HIT,
+    "summary_for_llm": (
+        "1 active fire detection(s) in the trailing 4 h window at 2026-11-17T14:00:00Z: "
+        "leader FIRE-2 at (37.1000, -121.9000) with FRP 80.0 MW, observed 2026-11-17T13:50:00Z."
+    ),
+    "evidence_refs": {
+        "fire_ids": ["FIRE-2"],
+        "station_ids": [],
+        "focus_timestamp": TS,
+        "bbox_focus": [-122.5, 37.0, -121.5, 37.25],
+    },
+    "fires": [FIRE_SIDE],
+}
 FRESH_STABLE: dict[str, dict[str, Any]] = {
     "nasa_firms": {
         "last_run_at": "2026-11-17T14:30:00Z",
@@ -320,6 +378,45 @@ def test_tool3_empty_window(mcp_server: Any) -> None:
     )
 
 
+def test_tool4_lists_scene_fires(mcp_server: Any) -> None:
+    """TS=14:00Z sees both VIIRS-375 detections, keyed under a fires envelope entry."""
+    assert call_tool(mcp_server, "list_active_fires", {"timestamp_iso": TS}) == T4_HIT
+
+
+def test_tool4_region_keep_reports_requested_bbox(mcp_server: Any) -> None:
+    """A bbox that keeps FIRE-2 echoes itself as bbox_focus and drops FIRE-1."""
+    assert (
+        call_tool(
+            mcp_server,
+            "list_active_fires",
+            {"timestamp_iso": TS, "region_bbox": [-122.5, 37.0, -121.5, 37.25]},
+        )
+        == T4_REGION
+    )
+
+
+def test_tool4_region_excluding_everything_empties_envelope(mcp_server: Any) -> None:
+    """A bbox with no fires drops them all and the bbox_focus key entirely."""
+    payload = call_tool(
+        mcp_server,
+        "list_active_fires",
+        {"timestamp_iso": TS, "region_bbox": [-110.0, 30.0, -100.0, 35.0]},
+    )
+    expected = {
+        **T4_EMPTY,
+        "summary_for_llm": f"No active fires at {TS} in the trailing 4 h window.",
+        "evidence_refs": {**T4_EMPTY["evidence_refs"], "focus_timestamp": TS},
+    }
+    assert payload == expected
+
+
+def test_tool4_empty_window(mcp_server: Any) -> None:
+    """A target instant before the first detection returns the bare empty envelope."""
+    assert (
+        call_tool(mcp_server, "list_active_fires", {"timestamp_iso": EARLY_END}) == T4_EMPTY
+    )
+
+
 def test_freshness_stable_fields(mcp_server: Any) -> None:
     """Freshness pins per-source latency and never depends on wall-clock age."""
     payload = read_resource(mcp_server, "resource://data/freshness")
@@ -378,6 +475,31 @@ def test_tool3_rejects_zero_limit(mcp_server: Any) -> None:
             "find_worst_air_quality_events",
             {"start_iso": START, "end_iso": END, "limit": 0},
         )
+
+
+def test_tool4_rejects_short_region_bbox(mcp_server: Any) -> None:
+    with pytest.raises(
+        ToolError,
+        match=re.escape(
+            "Error calling tool 'list_active_fires': region_bbox must carry exactly four "
+            "values: [min_lon, min_lat, max_lon, max_lat]."
+        ),
+    ):
+        call_tool(
+            mcp_server,
+            "list_active_fires",
+            {"timestamp_iso": TS, "region_bbox": [-122.0, 37.0]},
+        )
+
+
+def test_tool4_rejects_unparseable_timestamp(mcp_server: Any) -> None:
+    with pytest.raises(
+        ToolError,
+        match=re.escape(
+            "Error calling tool 'list_active_fires': Invalid ISO-8601 timestamp 'not-a-ts'."
+        ),
+    ):
+        call_tool(mcp_server, "list_active_fires", {"timestamp_iso": "not-a-ts"})
 
 
 def test_tool1_rejects_short_region_bbox(mcp_server: Any) -> None:

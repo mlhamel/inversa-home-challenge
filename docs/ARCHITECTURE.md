@@ -80,7 +80,7 @@ FastAPI (`app.py`) serves `/snapshot` (ETag-cached) and `/timeline/summary` (`re
 
 ### 6 · Grounded AI — `/mcp` + Pydantic AI agent
 
-A FastMCP server is mounted inside the same FastAPI app at `/mcp`. Its three tools (`analyze_downwind_impact`, `get_station_timeseries`, `find_worst_air_quality_events`) query DuckDB directly and every response is an `McpToolEnvelope` with structured `evidence_refs`; a `resource://data/freshness` resource exposes lake freshness. The chat agent (`agent/orchestrator.py`) is a Pydantic AI `Agent` whose toolset *is* that MCP surface — not a separate codepath — and `/api/chat` (`chat.py`) streams the session to the browser over SSE. See the [Pydantic AI spotlight](#pydantic-ai-over-ollama-glm-53) below.
+A FastMCP server is mounted inside the same FastAPI app at `/mcp`. Its four tools (`analyze_downwind_impact`, `get_station_timeseries`, `find_worst_air_quality_events`, `list_active_fires`) query DuckDB directly and every response is an `McpToolEnvelope` with structured `evidence_refs`; a `resource://data/freshness` resource exposes lake freshness. The chat agent (`agent/orchestrator.py`) is a Pydantic AI `Agent` whose toolset *is* that MCP surface — not a separate codepath — and `/api/chat` (`chat.py`) streams the session to the browser over SSE. See the [Pydantic AI spotlight](#pydantic-ai-over-ollama-glm-53) below.
 
 ### 7 · Frontend — `apps/web`
 
