@@ -19,7 +19,7 @@ TEST_MODEL_NAME: Final[str] = "test"
 
 
 def build_toolset(mcp: FastMCP) -> FunctionToolset[Any]:
-    """Expose the three FastMCP grounding tools as PydanticAI function tools.
+    """Expose the four FastMCP grounding tools as PydanticAI function tools.
 
     The wrappers shell out to the mounted MCP server so the agent consumes the
     exact same McpToolEnvelope payloads as any other MCP client (spec-04).
@@ -85,8 +85,30 @@ def build_toolset(mcp: FastMCP) -> FunctionToolset[Any]:
             )
         return dict(result.data)
 
+    async def list_active_fires(
+        timestamp_iso: str,
+        region_bbox: list[float] | None = None,
+    ) -> dict[str, Any]:
+        """List FIRMS active-fire detections in the trailing 4 h window at an instant.
+
+        Args:
+            timestamp_iso: ISO-8601 instant; naive values are treated as UTC.
+            region_bbox: optional [min_lon, min_lat, max_lon, max_lat] viewport filter.
+        """
+        async with Client(mcp) as client:
+            result = await client.call_tool(
+                "list_active_fires",
+                {"timestamp_iso": timestamp_iso, "region_bbox": region_bbox},
+            )
+        return dict(result.data)
+
     return FunctionToolset(
-        [analyze_downwind_impact, get_station_timeseries, find_worst_air_quality_events]
+        [
+            analyze_downwind_impact,
+            get_station_timeseries,
+            find_worst_air_quality_events,
+            list_active_fires,
+        ]
     )
 
 

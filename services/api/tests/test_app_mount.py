@@ -18,7 +18,12 @@ INIT_PARAMS: dict[str, Any] = {
     "capabilities": {},
     "clientInfo": {"name": "pytest", "version": "0"},
 }
-TOOL_IDS = ["analyze_downwind_impact", "get_station_timeseries", "find_worst_air_quality_events"]
+TOOL_IDS = [
+    "analyze_downwind_impact",
+    "get_station_timeseries",
+    "find_worst_air_quality_events",
+    "list_active_fires",
+]
 CALL_KEYS = ["content", "isError", "structuredContent"]
 
 
@@ -43,8 +48,8 @@ def test_initialize_negotiates_a_session(http_app: TestClient) -> None:
     assert isinstance(session_id, str) and len(session_id) > 0
 
 
-def test_tools_list_exposes_the_three_tools(http_app: TestClient) -> None:
-    """tools/list over the mounted HTTP transport names all three spec-04 tools."""
+def test_tools_list_exposes_the_four_tools(http_app: TestClient) -> None:
+    """tools/list over the mounted HTTP transport names all four spec-04 tools."""
     headers = {**ACCEPT, "mcp-session-id": _session_id(http_app)}
     response = http_app.post(
         "/mcp/",

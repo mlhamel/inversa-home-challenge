@@ -1,9 +1,9 @@
-"""FastMCP tool surface (spec-04): three grounding tools and two data resources.
+"""FastMCP tool surface (spec-04): four grounding tools and two data resources.
 
 Every tool returns the spec-04 section 2 envelope JSON (``summary_for_llm``,
 ``data_quality_notes``, ``evidence_refs``). The proto ``DownwindMatch`` record is
-shaped for tool 1's fire -> wind -> station correlation, so tools 2 and 3 keep
-the envelope keys and carry their rows under a ``timeseries`` / ``events`` key.
+shaped for tool 1's fire -> wind -> station correlation, so tools 2-4 keep the
+envelope keys and carry their rows under a ``timeseries`` / ``events`` / ``fires`` key.
 """
 
 from __future__ import annotations
@@ -287,6 +287,85 @@ def build_mcp(settings: Settings) -> FastMCP:
             matches=[],
         )
         envelope["events"] = events
+        return envelope
+
+    @mcp.tool
+    def list_active_fires(
+        timestamp_iso: str,
+        region_bbox: list[float] | None = None,
+    ) -> dict[str, Any]:
+        """List FIRMS active-fire detections in the trailing 4 h snapshot window (spec-05).
+
+        Args:
+            timestamp_iso: ISO-8601 instant; naive values are treated as UTC.
+            region_bbox: optional [min_lon, min_lat, max_lon, max_lat]; keeps only the
+                fires inside the box and reports the box as bbox_focus so the UI
+                keeps the requested viewport.
+        """
+        target_ts = _parse_iso(timestamp_iso)
+        cursor = open_cursor()
+        try:
+            rows = queries.run_snapshot_fires(cursor, target_ts=target_ts)
+        finally:
+            cursor.close()
+        if region_bbox is not None:
+            if len(region_bbox) != 4:
+                raise ValueError(
+                    "region_bbox must carry exactly four values: "
+                    "[min_lon, min_lat, max_lon, max_lat]."
+                )
+            min_lon, min_lat, max_lon, max_lat = _normalize_bbox(region_bbox)
+            rows = [
+                row
+                for row in rows
+                if min_lon <= row.lon <= max_lon and min_lat <= row.lat <= max_lat
+            ]
+        notes = [FIRMS_LATENCY_NOTE]
+        if not rows:
+            notes.append(
+                "No FIRMS active-fire detections in the trailing 4 h snapshot window at "
+                "this timestamp."
+            )
+            return empty_envelope(
+                summary_for_llm=(
+                    f"No active fires at {_iso_z(target_ts)} in the trailing 4 h window."
+                ),
+                notes=notes,
+                focus_timestamp=target_ts,
+            )
+        leader = max(rows, key=lambda row: row.frp if row.frp is not None else -1.0)
+        frp_text = f"{leader.frp:.1f} MW" if leader.frp is not None else "FRP unavailable"
+        summary = (
+            f"{len(rows)} active fire detection(s) in the trailing 4 h window at "
+            f"{_iso_z(target_ts)}: leader {leader.fire_id} at ({leader.lat:.4f}, "
+            f"{leader.lon:.4f}) with FRP {frp_text}, observed "
+            f"{_iso_z(_as_utc(leader.observed_at))}."
+        )
+        envelope = build_envelope(
+            summary_for_llm=summary,
+            data_quality_notes=notes,
+            fire_ids=[row.fire_id for row in rows],
+            station_ids=[],
+            focus_timestamp=target_ts,
+            bbox_focus=(
+                _normalize_bbox(region_bbox)
+                if region_bbox is not None
+                else _bbox_from_points([(row.lon, row.lat) for row in rows])
+            ),
+            matches=[],
+        )
+        envelope["fires"] = [
+            {
+                "fire_id": row.fire_id,
+                "observed_at": _iso_z(_as_utc(row.observed_at)),
+                "lat": row.lat,
+                "lon": row.lon,
+                "frp_mw": row.frp,
+                "confidence": row.confidence,
+                "satellite": row.satellite,
+            }
+            for row in rows
+        ]
         return envelope
 
     @mcp.resource("resource://data/freshness")
